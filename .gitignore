@@ -1,0 +1,14 @@
+# Reference clones (external repos, not part of this project's history)
+references/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
