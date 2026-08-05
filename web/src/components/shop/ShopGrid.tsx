@@ -6,21 +6,29 @@ import { clsx } from "clsx";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "@/components/product/ProductCard";
 
-const CATEGORIES = ["All", "Oriental", "Floral", "Fresh", "Woody", "Musk"] as const;
+const FILTERS = [
+  "Signature Collection",
+  "Best Sellers",
+  "Oriental",
+  "Floral",
+  "Fresh",
+  "Woody",
+  "Musk",
+] as const;
 
 export function ShopGrid({ products }: { products: Product[] }) {
-  const [active, setActive] = useState<(typeof CATEGORIES)[number]>("All");
+  const [active, setActive] = useState<(typeof FILTERS)[number]>("Signature Collection");
 
-  const filtered = useMemo(
-    () =>
-      active === "All" ? products : products.filter((p) => p.category === active),
-    [active, products],
-  );
+  const filtered = useMemo(() => {
+    if (active === "Signature Collection") return products;
+    if (active === "Best Sellers") return products.filter((p) => p.bestseller);
+    return products.filter((p) => p.category === active);
+  }, [active, products]);
 
   return (
     <div>
       <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2">
-        {CATEGORIES.map((cat) => (
+        {FILTERS.map((cat) => (
           <button
             key={cat}
             onClick={() => setActive(cat)}
