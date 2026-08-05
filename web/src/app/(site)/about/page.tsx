@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
-import { products } from "@/lib/products";
+import { getAllProducts } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "About — Salman Perfumes",
@@ -32,7 +32,9 @@ const VALUES = [
   },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const products = await getAllProducts();
+
   return (
     <div className="pt-16 md:pt-20">
       <section className="container-grid border-b border-line py-20 md:py-32">

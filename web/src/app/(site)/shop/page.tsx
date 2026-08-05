@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { products } from "@/lib/products";
+import { getAllProducts } from "@/lib/products";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 
 export const metadata: Metadata = {
@@ -7,7 +7,9 @@ export const metadata: Metadata = {
   description: "Browse all six Salman Perfumes eaux de parfum.",
 };
 
-export default function ShopPage() {
+export default async function ShopPage() {
+  const products = await getAllProducts();
+
   return (
     <div className="pt-16 md:pt-20">
       <div className="container-grid border-b border-line py-14 md:py-20">

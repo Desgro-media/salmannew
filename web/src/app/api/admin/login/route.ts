@@ -1,0 +1,48 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import {
+  createSessionToken,
+  verifyPassword,
+  SESSION_COOKIE_NAME,
+  SESSION_COOKIE_MAX_AGE,
+} from "@/lib/auth";
+
+const loginSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(1),
+});
+
+export async function POST(request: Request) {
+  const json = await request.json();
+  const parsed = loginSchema.safeParse(json);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
+  }
+
+  const { email, password } = parsed.data;
+  const admin = await prisma.admin.findUnique({ where: { email } });
+
+  if (!admin || !(await verifyPassword(password, admin.passwordHash))) {
+    return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
+  }
+
+  const token = await createSessionToken({
+    sub: admin.id,
+    email: admin.email,
+    role: admin.role,
+  });
+
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_COOKIE_MAX_AGE,
+  });
+
+  return NextResponse.json({ email: admin.email, role: admin.role });
+}

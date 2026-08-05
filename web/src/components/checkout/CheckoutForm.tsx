@@ -8,10 +8,8 @@ import { useCart, cartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
 import { placeOrder } from "@/lib/orders";
 import { useHasMounted } from "@/lib/use-has-mounted";
+import { calculateShipping } from "@/lib/shipping";
 import type { CustomerDetails } from "@/lib/types";
-
-const SHIPPING_THRESHOLD = 2999;
-const SHIPPING_FEE = 149;
 
 const FIELDS: { name: keyof CustomerDetails; label: string; type?: string; span?: 1 | 2 }[] = [
   { name: "fullName", label: "Full name", span: 2 },
@@ -41,7 +39,7 @@ export function CheckoutForm() {
   });
 
   const subtotal = mounted ? cartSubtotal(items) : 0;
-  const shipping = subtotal === 0 || subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const shipping = calculateShipping(subtotal);
   const total = subtotal + shipping;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {

@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "@/lib/products";
+import { getAllProducts } from "@/lib/products";
 
-export function Footer() {
+export async function Footer() {
+  const products = await getAllProducts();
+
   return (
     <footer className="border-t border-line bg-ink text-paper">
       <div className="container-grid grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-12 md:py-24">

@@ -1,9 +1,11 @@
-import { products } from "@/lib/products";
+import { getAllProducts } from "@/lib/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 
-export function CollectionGrid() {
+export async function CollectionGrid() {
+  const products = await getAllProducts();
+
   return (
     <section id="collection" className="container-grid py-24 md:py-32">
       <div className="flex flex-col items-start justify-between gap-6 border-b border-line pb-8 md:flex-row md:items-end">

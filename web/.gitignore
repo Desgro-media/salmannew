@@ -32,9 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
+
+# local-dev-only image upload fallback (see api/admin/uploads/route.ts)
+/public/uploads
 
 # typescript
 *.tsbuildinfo

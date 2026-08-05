@@ -1,11 +1,12 @@
 import Image from "next/image";
-import { getProductBySlug, priceRangeFor } from "@/lib/products";
+import { getProductBySlug } from "@/lib/products";
+import { priceRangeFor } from "@/lib/price";
 import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 
-export function FeatureSpotlight() {
-  const product = getProductBySlug("imperial")!;
+export async function FeatureSpotlight() {
+  const product = (await getProductBySlug("imperial"))!;
   const { min } = priceRangeFor(product);
 
   return (

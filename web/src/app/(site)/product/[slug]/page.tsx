@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProductBySlug, getRelatedProducts, products } from "@/lib/products";
+import { getProductBySlug, getRelatedProducts } from "@/lib/products";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { AddToCartPanel } from "@/components/product/AddToCartPanel";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
@@ -8,9 +8,10 @@ import { AccordionItem } from "@/components/ui/Accordion";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Reveal } from "@/components/motion/Reveal";
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
-}
+// Products are admin-managed in the DB now, so params can't be enumerated
+// statically at build time. ISR keeps pages fast while picking up admin
+// edits within a minute (see revalidatePath calls in the admin product API).
+export const revalidate = 60;
 
 export async function generateMetadata({
   params,
@@ -18,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) return {};
   return {
     title: `${product.fullName} — Salman Perfumes`,
@@ -32,10 +33,10 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const related = getRelatedProducts(slug, 3);
+  const related = await getRelatedProducts(slug, 3);
 
   return (
     <div className="pt-16 md:pt-20">
