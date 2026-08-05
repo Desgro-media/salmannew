@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AdminRole {
+  ADMIN
+  SUPERADMIN
+}
+
+enum Category {
+  Oriental
+  Fresh
+  Floral
+  Woody
+  Musk
+}
+
+model Admin {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime  @default(now())
+}
+
+model Product {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  name          String
+  fullName      String
+  tagline       String
+  category      Category
+  description   String        @db.Text
+  story         String        @db.Text
+  notesTop      String[]
+  notesHeart    String[]
+  notesBase     String[]
+  concentration String
+  accent        String
+  images        String[]
+  bestseller    Boolean       @default(false)
+  isNew         Boolean       @default(false)
+  isArchived    Boolean       @default(false)
+  sizes         ProductSize[]
+  orderItems    OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model ProductSize {
+  id             String      @id
+  productId      String
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label          String
+  volumeMl       Int
+  sku            String      @unique
+  // Whole rupees, matching current app behavior (formatPrice renders 0 decimals,
+  // paise are never used or displayed anywhere in this app).
+  price          Int
+  compareAtPrice Int?
+  image          String
+  thumb          String
+  orderItems     OrderItem[]
+
+  @@index([productId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique
+  status            String      @default("received")
+  subtotal          Int
+  shipping          Int         @default(0)
+  total             Int
+  customerFullName  String
+  customerEmail     String
+  customerPhone     String
+  customerAddress   String
+  customerCity      String
+  customerState     String
+  customerPincode   String
+  estimatedDelivery DateTime
+  items             OrderItem[]
+  createdAt         DateTime    @default(now())
+
+  @@index([customerEmail])
+}
+
+// Denormalizes name/price/image/sizeLabel/sku at purchase time so historical
+// orders stay accurate even if the product is later renamed or repriced.
+model OrderItem {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  sizeId    String
+  size      ProductSize @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+  name      String
+  sizeLabel String
+  price     Int
+  image     String
+  quantity  Int
+  sku       String
+
+  @@index([productId])
+  @@index([sizeId])
+}

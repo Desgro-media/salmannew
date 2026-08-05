@@ -2,9 +2,6 @@ import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { CartDrawer } from "@/components/layout/CartDrawer";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -26,12 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${archivo.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-paper text-ink">
-        <SmoothScroll>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <CartDrawer />
-        </SmoothScroll>
+        <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
   );
