@@ -16,16 +16,16 @@ export function AccordionItem({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-line">
+    <div className="overflow-hidden rounded-[20px] bg-paper-2/70">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between py-4 text-left text-sm font-semibold"
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold"
         aria-expanded={open}
       >
         {title}
         <span
           className={clsx(
-            "text-lg transition-transform duration-300",
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-paper text-base leading-none transition-transform duration-300",
             open && "rotate-45",
           )}
         >
@@ -41,7 +41,7 @@ export function AccordionItem({
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <p className="pb-4 text-sm leading-relaxed text-ink-soft">
+            <p className="px-5 pb-5 text-sm leading-relaxed text-ink-soft">
               {children}
             </p>
           </motion.div>
