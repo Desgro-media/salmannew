@@ -23,10 +23,10 @@ export async function CollectionGrid() {
         </Reveal>
       </div>
 
-      <div className="mt-12 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-14">
+      <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 lg:gap-6">
         {products.map((product, i) => (
           <Reveal key={product.id} delay={(i % 3) * 0.08}>
-            <ProductCard product={product} index={i} />
+            <ProductCard product={product} />
           </Reveal>
         ))}
       </div>

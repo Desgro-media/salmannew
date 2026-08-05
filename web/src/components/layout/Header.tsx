@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart, cartCount } from "@/lib/store/cart";
+import { useWishlist } from "@/lib/store/wishlist";
 import { useHasMounted } from "@/lib/use-has-mounted";
 
 const NAV_LINKS = [
@@ -18,8 +19,10 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const items = useCart((s) => s.items);
   const toggleCart = useCart((s) => s.toggle);
+  const wishlistSlugs = useWishlist((s) => s.slugs);
   const mounted = useHasMounted();
   const count = mounted ? cartCount(items) : 0;
+  const wishlistCount = mounted ? wishlistSlugs.length : 0;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -75,6 +78,29 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4 md:gap-6">
+          <Link
+            href="/wishlist"
+            onClick={() => setMobileOpen(false)}
+            className="relative flex items-center gap-2 eyebrow"
+            aria-label="Open wishlist"
+          >
+            <HeartIcon />
+            <span className="hidden sm:inline">Saved</span>
+            <AnimatePresence>
+              {wishlistCount > 0 && (
+                <motion.span
+                  key={wishlistCount}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="absolute -top-2 -right-3 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-[10px] font-semibold text-paper"
+                >
+                  {wishlistCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Link>
+
           <button
             onClick={toggleCart}
             className="relative flex items-center gap-2 eyebrow"
@@ -144,6 +170,19 @@ export function Header() {
         )}
       </AnimatePresence>
     </header>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 20s-7-4.35-9.5-8.8C.6 7.9 2 4.5 5.3 4c2-.3 3.7.7 4.7 2.4C11 4.7 12.7 3.7 14.7 4c3.3.5 4.7 3.9 2.8 7.2C19 15.65 12 20 12 20Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

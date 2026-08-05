@@ -47,12 +47,18 @@ export default async function ProductPage({
 
       <div className="container-grid grid grid-cols-1 gap-12 pb-24 md:grid-cols-12 md:gap-8 md:pb-32">
         <div className="md:col-span-7">
-          <ProductGallery images={product.images} name={product.fullName} />
+          <ProductGallery
+            images={product.images}
+            name={product.fullName}
+            accent={product.accent}
+          />
         </div>
 
         <div className="md:col-span-4 md:col-start-9">
-          <p className="eyebrow text-ink-soft">{product.category}</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight">
+          <span className="inline-block rounded-full bg-paper-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
+            {product.category}
+          </span>
+          <h1 className="mt-3 text-4xl font-black tracking-tight">
             {product.name}
           </h1>
           <p className="mt-2 text-ink-soft">{product.tagline}</p>
@@ -66,10 +72,10 @@ export default async function ProductPage({
           </p>
 
           <div className="mt-8">
-            <NotesPyramid notes={product.notes} />
+            <NotesPyramid notes={product.notes} accent={product.accent} />
           </div>
 
-          <div className="mt-2">
+          <div className="mt-6 flex flex-col gap-3">
             <AccordionItem title="The Story" defaultOpen>
               {product.story}
             </AccordionItem>
@@ -95,10 +101,10 @@ export default async function ProductPage({
               You Might Also Like
             </h2>
           </Reveal>
-          <div className="mt-12 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-14">
+          <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 lg:gap-6">
             {related.map((p, i) => (
               <Reveal key={p.id} delay={i * 0.08}>
-                <ProductCard product={p} index={i} />
+                <ProductCard product={p} />
               </Reveal>
             ))}
           </div>

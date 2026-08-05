@@ -51,7 +51,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
               key={s.id}
               onClick={() => setSizeId(s.id)}
               className={clsx(
-                "border px-5 py-2.5 text-sm font-semibold transition-colors",
+                "rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors duration-300",
                 sizeId === s.id
                   ? "border-ink bg-ink text-paper"
                   : "border-line text-ink hover:border-ink",
@@ -64,9 +64,9 @@ export function AddToCartPanel({ product }: { product: Product }) {
       </div>
 
       <div className="mt-8 flex items-stretch gap-3">
-        <div className="flex items-center border border-line">
+        <div className="flex items-center gap-1 rounded-full border border-line px-1.5">
           <button
-            className="px-4 text-lg"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-lg transition-colors duration-300 hover:bg-paper-2"
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
             aria-label="Decrease quantity"
           >
@@ -76,7 +76,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
             {quantity}
           </span>
           <button
-            className="px-4 text-lg"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-lg transition-colors duration-300 hover:bg-paper-2"
             onClick={() => setQuantity((q) => q + 1)}
             aria-label="Increase quantity"
           >
@@ -86,7 +86,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
 
         <button
           onClick={handleAdd}
-          className="relative flex-1 overflow-hidden bg-ink px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.14em] text-paper transition-colors hover:bg-gold hover:text-ink"
+          className="relative flex-1 overflow-hidden rounded-full bg-ink px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-gold hover:text-ink"
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.span

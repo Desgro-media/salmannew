@@ -40,9 +40,9 @@ export function ShopGrid({ products }: { products: Product[] }) {
         {filtered.length} scent{filtered.length !== 1 && "s"}
       </motion.p>
 
-      <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-14">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 lg:gap-6">
         <AnimatePresence mode="popLayout">
-          {filtered.map((product, i) => (
+          {filtered.map((product) => (
             <motion.div
               key={product.id}
               layout
@@ -51,7 +51,7 @@ export function ShopGrid({ products }: { products: Product[] }) {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              <ProductCard product={product} index={i} />
+              <ProductCard product={product} />
             </motion.div>
           ))}
         </AnimatePresence>

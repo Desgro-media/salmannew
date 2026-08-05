@@ -27,59 +27,112 @@ const letterVariants = {
   }),
 };
 
+interface BottleDrift {
+  /** keyframes are relative offsets from the anchor position, in px, looping back to 0 */
+  x: number[];
+  y: number[];
+  /** keyframes are offsets added to the bottle's base `rotate`, looping back to 0 */
+  rotate: number[];
+  /** independent loop durations for x / y / rotate so the three never sync up */
+  durations: [number, number, number];
+}
+
 interface BottleConfig {
   src: string;
   position: string;
   size: string;
   rotate: number;
   entranceDelay: number;
-  floatDuration: number;
   floatDelay: number;
   parallaxDepth: number;
+  drift: BottleDrift;
+  /** CSS filter (usually stacked drop-shadow()s) — replaces the old one-size-fits-all shadow */
+  filter: string;
   behind?: boolean;
+  /** soft blurred radial highlight seeded behind the bottle — reserved for the hero */
+  glow?: boolean;
 }
 
+// Editorial S-curve: Akhdar opens top-left (near the logo) with generous clear space
+// around it, the curve sweeps right to Imperial — the single hero, crowned on the
+// wordmark's golden-ratio line and never more than ~12% larger than the others — pivots
+// back through Orchid tucked behind the letters as a depth layer, then resolves at
+// Oud Lavender on the right edge as a light counterweight. All four share one tilt
+// family (kept within ±10°) so the rotations read as rhythm, not scatter, and every
+// bottle only grazes a letter's edge rather than covering it.
 const BOTTLES: BottleConfig[] = [
   {
     src: "/hero/imperial-cutout.png",
-    position: "left-[27%] top-[-6%] sm:left-[32%] sm:top-[0%] md:left-[35%] lg:left-[37%]",
-    size: "w-[14vw] max-w-[96px] sm:w-[14vw] sm:max-w-none md:w-[10.5vw] lg:w-[8vw]",
-    rotate: -6,
-    entranceDelay: 0.7,
-    floatDuration: 5,
-    floatDelay: 1.4,
-    parallaxDepth: 18,
-  },
-  {
-    src: "/hero/orchid-cutout.png",
-    position: "left-[53%] inset-y-[6%] sm:left-[55%] md:left-[56%] lg:left-[57%]",
-    size: "w-[16vw] max-w-[108px] sm:w-[15vw] sm:max-w-none md:w-[11.5vw] lg:w-[9vw]",
+    position: "left-[61.8%] top-[61%] md:top-[44%]",
+    size: "w-[13.1vw] max-w-[93px] sm:w-[10.9vw] sm:max-w-none md:w-[11vw] lg:w-[8vw]",
     rotate: 5,
-    entranceDelay: 0.85,
-    floatDuration: 4.4,
-    floatDelay: 1.5,
-    parallaxDepth: 12,
-    behind: true,
+    entranceDelay: 0.95,
+    floatDelay: 1.65,
+    parallaxDepth: 14,
+    filter:
+      "drop-shadow(0 10px 22px rgba(169,120,44,0.4)) drop-shadow(0 40px 50px rgba(19,17,16,0.35))",
+    glow: true,
+    // damped to ~2/3 of the other bottles' amplitude: the same wander reads as calm
+    // breathing on a small bottle but as wobble on the 100%-scale foreground hero
+    drift: {
+      x: [0, 3, -2, 4, -3, 1, 0],
+      y: [0, -4, 2, -3, 3, -1, 0],
+      rotate: [0, 1, -0.5, 1, -1, 0.5, 0],
+      durations: [16, 14, 15],
+    },
   },
   {
     src: "/hero/akhdar-cutout.png",
-    position: "left-[5%] bottom-[14%] sm:left-[1%] sm:bottom-[8%] md:left-[4%] lg:left-[7%]",
-    size: "w-[14vw] max-w-[96px] sm:w-[14.5vw] sm:max-w-none md:w-[11vw] lg:w-[8.5vw]",
-    rotate: 4,
-    entranceDelay: 1.0,
-    floatDuration: 4.8,
-    floatDelay: 1.6,
-    parallaxDepth: 22,
+    position: "left-[14%] top-[8%]",
+    size: "w-[12vw] max-w-[85px] sm:w-[10.1vw] sm:max-w-none md:w-[10.5vw] lg:w-[7.2vw]",
+    rotate: -8,
+    entranceDelay: 0.7,
+    floatDelay: 1.4,
+    parallaxDepth: 20,
+    filter: "drop-shadow(0 14px 18px rgba(19,17,16,0.2))",
+    behind: true,
+    drift: {
+      x: [0, 5, -3, 6, -4, 2, 0],
+      y: [0, -5, 3, -6, 4, -2, 0],
+      rotate: [0, 1.5, -1, 1.5, -1, 1, 0],
+      durations: [12, 10, 13],
+    },
   },
   {
     src: "/hero/oud-lavender-cutout.png",
-    position: "right-[5%] bottom-[11%] sm:right-[1%] sm:bottom-[5%] md:right-[4%] lg:right-[7%]",
-    size: "w-[14vw] max-w-[96px] sm:w-[14.5vw] sm:max-w-none md:w-[11vw] lg:w-[8.5vw]",
-    rotate: -4,
-    entranceDelay: 1.15,
-    floatDuration: 5.3,
-    floatDelay: 1.7,
-    parallaxDepth: 14,
+    position: "left-[83%] top-[13%] md:top-[20%]",
+    size: "w-[11.7vw] max-w-[84px] sm:w-[9.75vw] sm:max-w-none md:w-[10vw] lg:w-[7.2vw]",
+    rotate: -7,
+    entranceDelay: 1.45,
+    floatDelay: 2.15,
+    parallaxDepth: 16,
+    filter: "drop-shadow(0 14px 18px rgba(19,17,16,0.2))",
+    behind: true,
+    drift: {
+      x: [0, -5, 3, -6, 4, -2, 0],
+      y: [0, 5, -3, 6, -4, 2, 0],
+      rotate: [0, -1.5, 1, -1.5, 1, -1, 0],
+      durations: [13, 11, 12],
+    },
+  },
+  {
+    src: "/hero/orchid-cutout.png",
+    position: "left-[36%] md:left-[44%] top-[61%] md:top-[56%]",
+    size: "w-[9.3vw] max-w-[66px] sm:w-[7.9vw] sm:max-w-none md:w-[7.75vw] lg:w-[5.6vw]",
+    rotate: -7,
+    entranceDelay: 1.2,
+    floatDelay: 1.9,
+    parallaxDepth: 10,
+    // thin cool rim-light so it separates from the near-black letter stroke it's tucked behind
+    filter:
+      "drop-shadow(0 0 6px rgba(255,255,255,0.2)) drop-shadow(0 18px 24px rgba(19,17,16,0.32))",
+    behind: true,
+    drift: {
+      x: [0, 4, -3, 5, -3, 2, 0],
+      y: [0, -3, 4, -4, 3, -2, 0],
+      rotate: [0, 1.5, -1, 1.5, -1, 1, 0],
+      durations: [11, 9, 10],
+    },
   },
 ];
 
@@ -103,38 +156,69 @@ function FloatingBottle({
     [-bottle.parallaxDepth * 0.6, bottle.parallaxDepth * 0.6],
   );
 
+  const [xDuration, yDuration, rotateDuration] = bottle.drift.durations;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, rotate: bottle.rotate }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: -900, rotate: bottle.rotate }}
+      animate={{ opacity: 1, y: 0, rotate: 0 }}
       transition={{
-        duration: 1,
-        delay: bottle.entranceDelay,
-        ease: [0.16, 1, 0.3, 1],
+        y: {
+          type: "spring",
+          visualDuration: 0.9,
+          bounce: 0.42,
+          delay: bottle.entranceDelay,
+        },
+        rotate: {
+          type: "spring",
+          visualDuration: 0.9,
+          bounce: 0.35,
+          delay: bottle.entranceDelay,
+        },
+        opacity: { duration: 0.4, delay: bottle.entranceDelay, ease: "easeOut" },
       }}
-      className={`pointer-events-none absolute aspect-[561/1625] ${bottle.behind ? "-z-10" : "z-10"} ${bottle.position} ${bottle.size}`}
+      className={`pointer-events-none absolute aspect-[561/1625] ${bottle.behind ? "-z-10" : "-z-10 md:z-10"} ${bottle.position} ${bottle.size}`}
     >
+      {bottle.glow && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-[-45%] z-[5] rounded-full opacity-70 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(closest-side, rgba(255,196,28,0.35), rgba(255,196,28,0) 70%)",
+          }}
+        />
+      )}
+      {/* continuous wander: x, y, and rotate each loop on their own out-of-sync duration
+          so the combined path never reads as a simple back-and-forth */}
       <motion.div
-        style={{ x: parallaxX, y: parallaxY }}
         animate={{
-          y: [0, -10, 0],
-          rotate: [bottle.rotate, bottle.rotate + 4, bottle.rotate],
+          x: bottle.drift.x,
+          y: bottle.drift.y,
+          rotate: bottle.drift.rotate.map((offset) => bottle.rotate + offset),
         }}
         transition={{
-          duration: bottle.floatDuration,
-          delay: bottle.floatDelay,
-          repeat: Infinity,
-          ease: "easeInOut",
+          x: { duration: xDuration, delay: bottle.floatDelay, repeat: Infinity, ease: "easeInOut" },
+          y: { duration: yDuration, delay: bottle.floatDelay + 0.3, repeat: Infinity, ease: "easeInOut" },
+          rotate: {
+            duration: rotateDuration,
+            delay: bottle.floatDelay + 0.6,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
         }}
         className="relative h-full w-full"
       >
-        <Image
-          src={bottle.src}
-          alt=""
-          fill
-          sizes="130px"
-          className="object-contain drop-shadow-[0_25px_30px_rgba(19,17,16,0.3)]"
-        />
+        <motion.div style={{ x: parallaxX, y: parallaxY }} className="relative h-full w-full">
+          <Image
+            src={bottle.src}
+            alt=""
+            fill
+            sizes="170px"
+            className="object-contain"
+            style={{ filter: bottle.filter }}
+          />
+        </motion.div>
       </motion.div>
     </motion.div>
   );
@@ -203,7 +287,9 @@ export function Hero() {
         </motion.p>
       </div>
 
-      {/* giant kinetic wordmark, four scents floating around it */}
+      {/* giant kinetic wordmark; the four bottles are positioned against this whole
+          wrapper (not just the word's own height) so they can trace one continuous
+          S-curve from the logo above down to the CTA below */}
       <motion.div
         style={{ scale, opacity, y }}
         className="relative flex flex-1 flex-col items-center justify-center py-6"
@@ -229,16 +315,16 @@ export function Hero() {
               </span>
             ))}
           </motion.div>
-
-          {BOTTLES.map((bottle) => (
-            <FloatingBottle
-              key={bottle.src}
-              bottle={bottle}
-              springX={springX}
-              springY={springY}
-            />
-          ))}
         </div>
+
+        {BOTTLES.map((bottle) => (
+          <FloatingBottle
+            key={bottle.src}
+            bottle={bottle}
+            springX={springX}
+            springY={springY}
+          />
+        ))}
       </motion.div>
 
       {/* bottom row */}
