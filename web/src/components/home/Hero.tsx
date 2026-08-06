@@ -15,6 +15,11 @@ import { ButtonLink } from "@/components/ui/Button";
 
 const WORD = "SALMAN";
 
+// stepped extrusion (hard, decreasing-opacity offsets) plus a soft blurred cast
+// shadow at the end — reads as a chiseled 3D letterform rather than a flat cutout
+const LETTER_SHADOW =
+  "1px 1px 0 rgba(19,17,16,0.55), 2px 2px 0 rgba(19,17,16,0.45), 3px 3px 0 rgba(19,17,16,0.35), 4px 4px 0 rgba(19,17,16,0.26), 5px 5px 0 rgba(19,17,16,0.18), 7px 8px 18px rgba(19,17,16,0.38)";
+
 const letterVariants = {
   hidden: { y: "110%" },
   visible: (i: number) => ({
@@ -63,14 +68,14 @@ interface BottleConfig {
 const BOTTLES: BottleConfig[] = [
   {
     src: "/hero/imperial-cutout.png",
-    position: "left-[61.8%] top-[61%] md:top-[44%]",
-    size: "w-[13.1vw] max-w-[93px] sm:w-[10.9vw] sm:max-w-none md:w-[11vw] lg:w-[8vw]",
+    position: "left-[61.8%] top-[61%] md:top-[58%]",
+    size: "w-[8.8vw] max-w-[63px] sm:w-[7.5vw] sm:max-w-none md:w-[7.4vw] lg:w-[5.4vw]",
     rotate: 5,
     entranceDelay: 0.95,
     floatDelay: 1.65,
     parallaxDepth: 14,
     filter:
-      "drop-shadow(0 10px 22px rgba(169,120,44,0.4)) drop-shadow(0 40px 50px rgba(19,17,16,0.35))",
+      "drop-shadow(0 3px 5px rgba(19,17,16,0.4)) drop-shadow(0 10px 22px rgba(169,120,44,0.4)) drop-shadow(0 40px 50px rgba(19,17,16,0.35))",
     glow: true,
     // damped to ~2/3 of the other bottles' amplitude: the same wander reads as calm
     // breathing on a small bottle but as wobble on the 100%-scale foreground hero
@@ -83,13 +88,14 @@ const BOTTLES: BottleConfig[] = [
   },
   {
     src: "/hero/akhdar-cutout.png",
-    position: "left-[14%] top-[8%]",
+    position: "left-[14%] top-[12%] md:top-[8%]",
     size: "w-[12vw] max-w-[85px] sm:w-[10.1vw] sm:max-w-none md:w-[10.5vw] lg:w-[7.2vw]",
     rotate: -8,
     entranceDelay: 0.7,
     floatDelay: 1.4,
     parallaxDepth: 20,
-    filter: "drop-shadow(0 14px 18px rgba(19,17,16,0.2))",
+    filter:
+      "drop-shadow(0 3px 5px rgba(19,17,16,0.32)) drop-shadow(0 20px 26px rgba(19,17,16,0.22))",
     behind: true,
     drift: {
       x: [0, 5, -3, 6, -4, 2, 0],
@@ -106,7 +112,8 @@ const BOTTLES: BottleConfig[] = [
     entranceDelay: 1.45,
     floatDelay: 2.15,
     parallaxDepth: 16,
-    filter: "drop-shadow(0 14px 18px rgba(19,17,16,0.2))",
+    filter:
+      "drop-shadow(0 3px 5px rgba(19,17,16,0.32)) drop-shadow(0 20px 26px rgba(19,17,16,0.22))",
     behind: true,
     drift: {
       x: [0, -5, 3, -6, 4, -2, 0],
@@ -125,7 +132,7 @@ const BOTTLES: BottleConfig[] = [
     parallaxDepth: 10,
     // thin cool rim-light so it separates from the near-black letter stroke it's tucked behind
     filter:
-      "drop-shadow(0 0 6px rgba(255,255,255,0.2)) drop-shadow(0 18px 24px rgba(19,17,16,0.32))",
+      "drop-shadow(0 0 6px rgba(255,255,255,0.2)) drop-shadow(0 3px 5px rgba(19,17,16,0.35)) drop-shadow(0 20px 28px rgba(19,17,16,0.34))",
     behind: true,
     drift: {
       x: [0, 4, -3, 5, -3, 2, 0],
@@ -308,6 +315,7 @@ export function Hero() {
                   variants={letterVariants}
                   whileHover={{ y: -14, color: "var(--color-gold-deep)" }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  style={{ textShadow: LETTER_SHADOW }}
                   className="inline-block font-sans text-[22vw] font-black leading-none tracking-[-0.05em] text-ink sm:text-[19vw] md:text-[17vw] lg:text-[15vw]"
                 >
                   {char}

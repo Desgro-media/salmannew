@@ -1,6 +1,9 @@
 # Reference clones (external repos, not part of this project's history)
 references/
 
+# Raw source reel downloads — the working copies live in web/public/reels
+/reels/
+
 # Python
 __pycache__/
 *.pyc

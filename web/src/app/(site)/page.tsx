@@ -1,8 +1,9 @@
 import { Hero } from "@/components/home/Hero";
 import { Marquee } from "@/components/home/Marquee";
-import { CollectionGrid } from "@/components/home/CollectionGrid";
+import { BestSellers } from "@/components/home/BestSellers";
+import { SignatureCollections } from "@/components/home/SignatureCollections";
 import { FeatureSpotlight } from "@/components/home/FeatureSpotlight";
-import { BrandStory } from "@/components/home/BrandStory";
+import { InstagramReels } from "@/components/home/InstagramReels";
 import { NewsletterBand } from "@/components/home/NewsletterBand";
 
 export default function Home() {
@@ -10,9 +11,10 @@ export default function Home() {
     <>
       <Hero />
       <Marquee />
-      <CollectionGrid />
+      <BestSellers />
+      <SignatureCollections />
       <FeatureSpotlight />
-      <BrandStory />
+      <InstagramReels />
       <NewsletterBand />
     </>
   );
