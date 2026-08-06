@@ -29,11 +29,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
   }
 
-  const token = await createSessionToken({
-    sub: admin.id,
-    email: admin.email,
-    role: admin.role,
-  });
+  let token: string;
+  try {
+    token = await createSessionToken({
+      sub: admin.id,
+      email: admin.email,
+      role: admin.role,
+    });
+  } catch (err) {
+    console.error("Failed to create admin session token:", err);
+    return NextResponse.json(
+      { error: "Server misconfiguration — session signing failed." },
+      { status: 500 },
+    );
+  }
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {

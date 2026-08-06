@@ -24,7 +24,7 @@ export default function AdminLoginPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error ?? "Invalid credentials.");
+        setError(body?.error ?? "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
       }
