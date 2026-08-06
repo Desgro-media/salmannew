@@ -13,7 +13,7 @@ export function NewsletterBand() {
 
   return (
     <section className="border-t border-line bg-paper-2">
-      <div className="container-grid grid grid-cols-1 items-center gap-8 py-20 md:grid-cols-12 md:py-28">
+      <div className="container-grid grid grid-cols-1 items-center gap-8 py-14 sm:py-20 md:grid-cols-12 md:py-28">
         <Reveal className="md:col-span-6">
           <h2 className="text-3xl font-black tracking-tight md:text-5xl">
             First on the list,
