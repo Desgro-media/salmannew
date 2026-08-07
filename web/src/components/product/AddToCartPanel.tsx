@@ -6,14 +6,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { useCart } from "@/lib/store/cart";
+import { useProductSelection } from "@/lib/product-selection-context";
 
 export function AddToCartPanel({ product }: { product: Product }) {
-  const [sizeId, setSizeId] = useState(product.sizes[0].id);
+  const { activeIndex, setActiveIndex } = useProductSelection();
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const addItem = useCart((s) => s.addItem);
 
-  const size = product.sizes.find((s) => s.id === sizeId)!;
+  const size = product.sizes[Math.min(activeIndex, product.sizes.length - 1)];
 
   function handleAdd() {
     addItem(
@@ -46,13 +47,13 @@ export function AddToCartPanel({ product }: { product: Product }) {
       <div className="mt-6">
         <p className="eyebrow text-ink-soft">Size</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {product.sizes.map((s) => (
+          {product.sizes.map((s, i) => (
             <button
               key={s.id}
-              onClick={() => setSizeId(s.id)}
+              onClick={() => setActiveIndex(i)}
               className={clsx(
                 "rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors duration-300",
-                sizeId === s.id
+                i === activeIndex
                   ? "border-ink bg-ink text-paper"
                   : "border-line text-ink hover:border-ink",
               )}

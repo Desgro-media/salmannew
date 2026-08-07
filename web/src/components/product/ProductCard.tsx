@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "@/lib/types";
-import { priceRangeFor } from "@/lib/price";
 import { formatPrice } from "@/lib/format";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
@@ -18,7 +17,6 @@ export function ProductCard({ product }: { product: Product }) {
   const toggleWishlist = useWishlist((s) => s.toggle);
   const mounted = useHasMounted();
   const liked = mounted && wishlistSlugs.includes(product.slug);
-  const { min, max } = priceRangeFor(product);
   const size = product.sizes[0];
   const label = product.bestseller ? "Popular" : product.isNew ? "New" : product.category;
 
@@ -94,9 +92,7 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold tracking-tight">{product.name}</h3>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{product.tagline}</p>
-          <p className="mt-2 text-lg font-bold">
-            {min === max ? formatPrice(min) : `${formatPrice(min)}–${formatPrice(max)}`}
-          </p>
+          <p className="mt-2 text-lg font-bold">{formatPrice(size.price)}</p>
         </div>
 
         <button
