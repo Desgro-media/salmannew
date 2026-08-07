@@ -5,19 +5,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "@/components/product/ProductCard";
+import { SHOP_FILTERS, type ShopFilter } from "@/lib/shop-filters";
 
-const FILTERS = [
-  "Signature Collection",
-  "Best Sellers",
-  "Oriental",
-  "Floral",
-  "Fresh",
-  "Woody",
-  "Musk",
-] as const;
+const FILTERS = SHOP_FILTERS;
 
-export function ShopGrid({ products }: { products: Product[] }) {
-  const [active, setActive] = useState<(typeof FILTERS)[number]>("Signature Collection");
+export function ShopGrid({
+  products,
+  initialFilter,
+}: {
+  products: Product[];
+  initialFilter?: ShopFilter;
+}) {
+  const [active, setActive] = useState<ShopFilter>(initialFilter ?? "Signature Collection");
 
   const filtered = useMemo(() => {
     if (active === "Signature Collection") return products;

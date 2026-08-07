@@ -11,7 +11,10 @@ import { useHasMounted } from "@/lib/use-has-mounted";
 
 const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
+  { href: "/shop?filter=Best+Sellers", label: "Best Sellers" },
+  { href: "/shop?filter=Signature+Collection", label: "Signature Collections" },
   { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function Header() {
