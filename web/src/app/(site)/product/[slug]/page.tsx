@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/products";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { AddToCartPanel } from "@/components/product/AddToCartPanel";
+import { ProductSelectionProvider } from "@/lib/product-selection-context";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -45,53 +46,55 @@ export default async function ProductPage({
         <span className="text-ink">{product.name}</span>
       </div>
 
-      <div className="container-grid grid grid-cols-1 gap-12 pb-24 md:grid-cols-12 md:gap-8 md:pb-32">
-        <div className="md:col-span-7">
-          <ProductGallery
-            images={product.images}
-            name={product.fullName}
-            accent={product.accent}
-          />
+      <ProductSelectionProvider>
+        <div className="container-grid grid grid-cols-1 gap-12 pb-24 md:grid-cols-12 md:gap-8 md:pb-32">
+          <div className="md:col-span-7">
+            <ProductGallery
+              images={product.images}
+              name={product.fullName}
+              accent={product.accent}
+            />
+          </div>
+
+          <div className="md:col-span-4 md:col-start-9">
+            <span className="inline-block rounded-full bg-paper-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
+              {product.category}
+            </span>
+            <h1 className="mt-3 text-4xl font-black tracking-tight">
+              {product.name}
+            </h1>
+            <p className="mt-2 text-ink-soft">{product.tagline}</p>
+
+            <div className="mt-8">
+              <AddToCartPanel product={product} />
+            </div>
+
+            <p className="mt-8 leading-relaxed text-ink-soft">
+              {product.description}
+            </p>
+
+            <div className="mt-8">
+              <NotesPyramid notes={product.notes} accent={product.accent} />
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <AccordionItem title="The Story" defaultOpen>
+                {product.story}
+              </AccordionItem>
+              <AccordionItem title="Shipping & Returns">
+                Dispatched in 2–4 business days. Free shipping on orders over
+                ₹2,999. Unopened bottles can be returned within 14 days of
+                delivery.
+              </AccordionItem>
+              <AccordionItem title="How to Apply">
+                Spray on pulse points — wrists, neck, behind the ears. Eau de
+                Parfum concentration lasts 6–8 hours; avoid rubbing the skin
+                after application.
+              </AccordionItem>
+            </div>
+          </div>
         </div>
-
-        <div className="md:col-span-4 md:col-start-9">
-          <span className="inline-block rounded-full bg-paper-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
-            {product.category}
-          </span>
-          <h1 className="mt-3 text-4xl font-black tracking-tight">
-            {product.name}
-          </h1>
-          <p className="mt-2 text-ink-soft">{product.tagline}</p>
-
-          <div className="mt-8">
-            <AddToCartPanel product={product} />
-          </div>
-
-          <p className="mt-8 leading-relaxed text-ink-soft">
-            {product.description}
-          </p>
-
-          <div className="mt-8">
-            <NotesPyramid notes={product.notes} accent={product.accent} />
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3">
-            <AccordionItem title="The Story" defaultOpen>
-              {product.story}
-            </AccordionItem>
-            <AccordionItem title="Shipping & Returns">
-              Dispatched in 2–4 business days. Free shipping on orders over
-              ₹2,999. Unopened bottles can be returned within 14 days of
-              delivery.
-            </AccordionItem>
-            <AccordionItem title="How to Apply">
-              Spray on pulse points — wrists, neck, behind the ears. Eau de
-              Parfum concentration lasts 6–8 hours; avoid rubbing the skin
-              after application.
-            </AccordionItem>
-          </div>
-        </div>
-      </div>
+      </ProductSelectionProvider>
 
       {related.length > 0 && (
         <section className="container-grid border-t border-line py-20 md:py-28">

@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
+import { useProductSelection } from "@/lib/product-selection-context";
 
 export function ProductGallery({
   images,
@@ -14,7 +15,8 @@ export function ProductGallery({
   name: string;
   accent: string;
 }) {
-  const [active, setActive] = useState(0);
+  const { activeIndex, setActiveIndex } = useProductSelection();
+  const active = Math.min(activeIndex, images.length - 1);
 
   return (
     <div
@@ -26,7 +28,7 @@ export function ProductGallery({
           {images.map((src, i) => (
             <button
               key={src}
-              onClick={() => setActive(i)}
+              onClick={() => setActiveIndex(i)}
               className={clsx(
                 "relative h-20 w-16 shrink-0 overflow-hidden rounded-2xl bg-paper-2 transition-all duration-300 md:h-24 md:w-20",
                 active === i
