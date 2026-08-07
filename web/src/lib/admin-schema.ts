@@ -1,15 +1,20 @@
 import { z } from "zod";
 
-export const productSizeInputSchema = z.object({
-  id: z.string().optional(),
-  label: z.string().trim().min(1),
-  volumeMl: z.number().int().positive(),
-  sku: z.string().trim().min(1),
-  price: z.number().int().nonnegative(),
-  compareAtPrice: z.number().int().nonnegative().optional(),
-  image: z.string().trim().min(1),
-  thumb: z.string().trim().min(1),
-});
+export const productSizeInputSchema = z
+  .object({
+    id: z.string().optional(),
+    label: z.string().trim().min(1),
+    volumeMl: z.number().int().positive(),
+    sku: z.string().trim().min(1),
+    price: z.number().int().nonnegative(),
+    compareAtPrice: z.number().int().nonnegative().optional(),
+    image: z.string().trim().min(1),
+    thumb: z.string().trim().min(1),
+  })
+  .refine((size) => size.compareAtPrice == null || size.compareAtPrice > size.price, {
+    message: "Original price must be higher than the sale price.",
+    path: ["compareAtPrice"],
+  });
 
 export const productInputSchema = z.object({
   slug: z

@@ -55,7 +55,7 @@ export async function BestSellers() {
                   <h3 className="mt-4 font-bold">{product.name}</h3>
                   <p className="mt-1 text-sm">
                     <span className="font-semibold">From {formatPrice(cheapest.price)}</span>
-                    {cheapest.compareAtPrice && (
+                    {cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price && (
                       <span className="ml-2 text-ink-soft line-through">
                         {formatPrice(cheapest.compareAtPrice)}
                       </span>

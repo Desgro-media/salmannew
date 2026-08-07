@@ -5,8 +5,32 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Input";
+import { formatPrice } from "@/lib/format";
 
 const CATEGORIES = ["Oriental", "Fresh", "Floral", "Woody", "Musk"] as const;
+const CONCENTRATIONS = ["Eau de Parfum", "Eau de Toilette", "Parfum", "Eau de Cologne"] as const;
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+}
+
+function suggestSku(slug: string, volumeMl: string): string {
+  const prefix = (slugify(slug).replace(/-/g, "").slice(0, 3) || "prd").toUpperCase();
+  const vol = volumeMl ? volumeMl.padStart(3, "0") : "000";
+  return `SP-${prefix}-${vol}`;
+}
+
+function discountSummary(price: string, compareAtPrice: string): string | null {
+  const p = Number(price);
+  const c = Number(compareAtPrice);
+  if (!p || !c || c <= p) return null;
+  const pct = Math.round(((c - p) / c) * 100);
+  return `Customers will see ${formatPrice(c)} crossed out, then ${formatPrice(p)} — ${pct}% off.`;
+}
 
 function SectionCard({
   step,
@@ -58,13 +82,12 @@ function UploadButton({
 
 interface SizeForm {
   id?: string;
-  label: string;
   volumeMl: string;
   sku: string;
   price: string;
+  onSale: boolean;
   compareAtPrice: string;
   image: string;
-  thumb: string;
 }
 
 interface ProductFormValues {
@@ -87,13 +110,12 @@ interface ProductFormValues {
 }
 
 const emptySize: SizeForm = {
-  label: "",
   volumeMl: "",
   sku: "",
   price: "",
+  onSale: false,
   compareAtPrice: "",
   image: "",
-  thumb: "",
 };
 
 const emptyValues: ProductFormValues = {
@@ -162,13 +184,12 @@ function fromInitial(initial: ProductFormInitial): ProductFormValues {
     isNew: initial.isNew,
     sizes: initial.sizes.map((s) => ({
       id: s.id,
-      label: s.label,
       volumeMl: String(s.volumeMl),
       sku: s.sku,
       price: String(s.price),
+      onSale: s.compareAtPrice != null,
       compareAtPrice: s.compareAtPrice != null ? String(s.compareAtPrice) : "",
       image: s.image,
-      thumb: s.thumb,
     })),
   };
 }
@@ -193,6 +214,7 @@ export function ProductForm({
   const [values, setValues] = useState<ProductFormValues>(
     initial ? fromInitial(initial) : emptyValues,
   );
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -208,6 +230,28 @@ export function ProductForm({
     }));
   }
 
+  function handleNameChange(name: string) {
+    setValues((v) => {
+      const slugWasAuto = v.slug === "" || v.slug === slugify(v.name);
+      const fullNameWasAuto = v.fullName === "" || v.fullName === `me. ${v.name}`;
+      return {
+        ...v,
+        name,
+        slug: slugWasAuto ? slugify(name) : v.slug,
+        fullName: fullNameWasAuto ? (name ? `me. ${name}` : "") : v.fullName,
+      };
+    });
+  }
+
+  function handleVolumeChange(index: number, volumeMl: string) {
+    const size = values.sizes[index];
+    const skuWasAuto = size.sku === "" || size.sku === suggestSku(values.slug, size.volumeMl);
+    updateSize(index, {
+      volumeMl,
+      ...(skuWasAuto ? { sku: suggestSku(values.slug, volumeMl) } : {}),
+    });
+  }
+
   async function handleGalleryUpload(files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
@@ -221,13 +265,13 @@ export function ProductForm({
     }
   }
 
-  async function handleSizeImageUpload(index: number, field: "image" | "thumb", files: FileList | null) {
+  async function handleSizeImageUpload(index: number, files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
     setUploading(true);
     try {
       const url = await uploadFile(file);
-      updateSize(index, { [field]: url });
+      updateSize(index, { image: url });
     } catch {
       setError("Image upload failed. Please try again.");
     } finally {
@@ -241,6 +285,16 @@ export function ProductForm({
 
     if (values.images.length === 0) {
       setError("Add at least one product photo.");
+      return;
+    }
+
+    const invalidDiscount = values.sizes.some(
+      (s) => s.onSale && !discountSummary(s.price, s.compareAtPrice),
+    );
+    if (invalidDiscount) {
+      setError(
+        "One of your sizes is marked \"on sale\" but the original price isn't higher than the sale price. Fix or turn off that discount before saving.",
+      );
       return;
     }
 
@@ -264,13 +318,13 @@ export function ProductForm({
       isNew: values.isNew,
       sizes: values.sizes.map((s) => ({
         id: s.id,
-        label: s.label,
+        label: `${s.volumeMl} ml`,
         volumeMl: Number(s.volumeMl),
         sku: s.sku,
         price: Math.round(Number(s.price)),
-        compareAtPrice: s.compareAtPrice ? Math.round(Number(s.compareAtPrice)) : undefined,
+        compareAtPrice: s.onSale && s.compareAtPrice ? Math.round(Number(s.compareAtPrice)) : undefined,
         image: s.image,
-        thumb: s.thumb || s.image,
+        thumb: s.image,
       })),
     };
 
@@ -302,246 +356,304 @@ export function ProductForm({
     <form onSubmit={handleSubmit} className="max-w-6xl pb-28">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <div className="space-y-6">
-        <SectionCard step="01" title="Basics" description="What the product is called and how it's grouped.">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Field label="Slug (url path)">
-              <Input
-                required
-                value={values.slug}
-                onChange={(e) => update("slug", e.target.value)}
-                placeholder="imperial"
-              />
-            </Field>
-            <Field label="Category">
-              <select
-                required
-                value={values.category}
-                onChange={(e) => update("category", e.target.value as ProductFormValues["category"])}
-                className="mt-1.5 w-full border border-line bg-transparent px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Name">
-              <Input required value={values.name} onChange={(e) => update("name", e.target.value)} />
-            </Field>
-            <Field label="Full name (product page title)">
-              <Input
-                required
-                value={values.fullName}
-                onChange={(e) => update("fullName", e.target.value)}
-              />
-            </Field>
-            <Field label="Tagline" className="sm:col-span-2">
-              <Input required value={values.tagline} onChange={(e) => update("tagline", e.target.value)} />
-            </Field>
-            <Field label="Concentration">
-              <Input
-                required
-                value={values.concentration}
-                onChange={(e) => update("concentration", e.target.value)}
-              />
-            </Field>
-            <Field label="Accent color (hex)">
-              <div className="mt-1.5 flex items-center gap-2">
-                <span
-                  className="h-9 w-9 shrink-0 border border-line"
-                  style={{ backgroundColor: values.accent }}
-                />
+          <SectionCard step="01" title="Basics" description="What the product is called and how it's grouped.">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field label="Product name" className="sm:col-span-2">
                 <Input
                   required
-                  className="mt-0"
-                  value={values.accent}
-                  onChange={(e) => update("accent", e.target.value)}
+                  value={values.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="Imperial"
                 />
-              </div>
-            </Field>
-          </div>
-          <div className="flex gap-6 border-t border-line pt-5 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[var(--color-ink)]"
-                checked={values.bestseller}
-                onChange={(e) => update("bestseller", e.target.checked)}
-              />
-              Bestseller
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[var(--color-ink)]"
-                checked={values.isNew}
-                onChange={(e) => update("isNew", e.target.checked)}
-              />
-              New
-            </label>
-          </div>
-        </SectionCard>
-
-        <SectionCard step="03" title="Gallery Photos" description="Shown on the shop grid and product page.">
-          {values.images.length > 0 && (
-            <div className="flex flex-wrap gap-3">
-              {values.images.map((url, i) => (
-                <div key={url + i} className="group relative h-24 w-20 overflow-hidden border border-line">
-                  <Image src={url} alt="" fill sizes="80px" className="object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => update("images", values.images.filter((_, idx) => idx !== i))}
-                    className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center bg-ink text-xs text-paper opacity-80 transition-opacity hover:opacity-100"
-                    aria-label="Remove photo"
-                  >
-                    ×
-                  </button>
+              </Field>
+              <Field label="Tagline" className="sm:col-span-2">
+                <Input
+                  required
+                  value={values.tagline}
+                  onChange={(e) => update("tagline", e.target.value)}
+                  placeholder="A short line shown under the name, e.g. Amber gold, worn like a crown."
+                />
+              </Field>
+              <Field label="Category">
+                <select
+                  required
+                  value={values.category}
+                  onChange={(e) => update("category", e.target.value as ProductFormValues["category"])}
+                  className="mt-1.5 w-full border border-line bg-transparent px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Concentration">
+                <select
+                  required
+                  value={values.concentration}
+                  onChange={(e) => update("concentration", e.target.value)}
+                  className="mt-1.5 w-full border border-line bg-transparent px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink"
+                >
+                  {CONCENTRATIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Brand color" className="sm:col-span-2">
+                <div className="mt-1.5 flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={/^#[0-9a-fA-F]{6}$/.test(values.accent) ? values.accent : "#131110"}
+                    onChange={(e) => update("accent", e.target.value)}
+                    className="h-10 w-14 cursor-pointer border border-line p-0.5"
+                  />
+                  <p className="text-xs text-ink-soft">
+                    Click the swatch to pick a color. Used for small accents around the site.
+                  </p>
                 </div>
-              ))}
+              </Field>
             </div>
-          )}
-          <UploadButton label="+ Add Photos" multiple onFiles={handleGalleryUpload} />
-        </SectionCard>
+            <div className="flex gap-6 border-t border-line pt-5 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[var(--color-ink)]"
+                  checked={values.bestseller}
+                  onChange={(e) => update("bestseller", e.target.checked)}
+                />
+                Bestseller
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[var(--color-ink)]"
+                  checked={values.isNew}
+                  onChange={(e) => update("isNew", e.target.checked)}
+                />
+                New
+              </label>
+            </div>
+            <div className="border-t border-line pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft hover:text-ink"
+              >
+                {showAdvanced ? "Hide advanced settings" : "+ Advanced settings"}
+              </button>
+              {showAdvanced && (
+                <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Field label="Web address">
+                    <Input
+                      value={values.slug}
+                      onChange={(e) => update("slug", slugify(e.target.value))}
+                      placeholder="imperial"
+                    />
+                  </Field>
+                  <Field label="Product page title">
+                    <Input required value={values.fullName} onChange={(e) => update("fullName", e.target.value)} />
+                  </Field>
+                  <p className="text-xs text-ink-soft sm:col-span-2">
+                    We fill these in automatically from the product name. Only change them if you need something different.
+                  </p>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+
+          <SectionCard step="03" title="Gallery Photos" description="Shown on the shop grid and product page.">
+            {values.images.length > 0 && (
+              <div className="flex flex-wrap gap-3">
+                {values.images.map((url, i) => (
+                  <div key={url + i} className="group relative h-24 w-20 overflow-hidden border border-line">
+                    <Image src={url} alt="" fill sizes="80px" className="object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => update("images", values.images.filter((_, idx) => idx !== i))}
+                      className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center bg-ink text-xs text-paper opacity-80 transition-opacity hover:opacity-100"
+                      aria-label="Remove photo"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <UploadButton label="+ Add Photos" multiple onFiles={handleGalleryUpload} />
+          </SectionCard>
         </div>
 
         <div className="space-y-6">
-        <SectionCard step="02" title="Story" description="The copy shown on the product page.">
-          <Field label="Description">
-            <Textarea
-              required
-              rows={4}
-              value={values.description}
-              onChange={(e) => update("description", e.target.value)}
-            />
-          </Field>
-          <Field label="Story">
-            <Textarea
-              required
-              rows={4}
-              value={values.story}
-              onChange={(e) => update("story", e.target.value)}
-            />
-          </Field>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <Field label="Top notes (one per line)">
-              <Textarea rows={4} value={values.notesTop} onChange={(e) => update("notesTop", e.target.value)} />
-            </Field>
-            <Field label="Heart notes (one per line)">
+          <SectionCard step="02" title="Story" description="The copy shown on the product page.">
+            <Field label="Description">
               <Textarea
+                required
                 rows={4}
-                value={values.notesHeart}
-                onChange={(e) => update("notesHeart", e.target.value)}
+                value={values.description}
+                onChange={(e) => update("description", e.target.value)}
+                placeholder="A short paragraph describing the scent."
               />
             </Field>
-            <Field label="Base notes (one per line)">
-              <Textarea rows={4} value={values.notesBase} onChange={(e) => update("notesBase", e.target.value)} />
+            <Field label="Story">
+              <Textarea
+                required
+                rows={4}
+                value={values.story}
+                onChange={(e) => update("story", e.target.value)}
+                placeholder="The longer story behind this scent."
+              />
             </Field>
-          </div>
-        </SectionCard>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+              <Field label="Top notes">
+                <Textarea
+                  rows={4}
+                  value={values.notesTop}
+                  onChange={(e) => update("notesTop", e.target.value)}
+                  placeholder={"One per line, e.g.\nBergamot\nPink Pepper"}
+                />
+                <p className="mt-1 text-xs text-ink-soft">What you smell first — fades within minutes.</p>
+              </Field>
+              <Field label="Heart notes">
+                <Textarea
+                  rows={4}
+                  value={values.notesHeart}
+                  onChange={(e) => update("notesHeart", e.target.value)}
+                  placeholder={"One per line, e.g.\nRose\nAmber"}
+                />
+                <p className="mt-1 text-xs text-ink-soft">The main scent — lasts a few hours.</p>
+              </Field>
+              <Field label="Base notes">
+                <Textarea
+                  rows={4}
+                  value={values.notesBase}
+                  onChange={(e) => update("notesBase", e.target.value)}
+                  placeholder={"One per line, e.g.\nOud\nMusk"}
+                />
+                <p className="mt-1 text-xs text-ink-soft">The lingering finish — lasts the longest.</p>
+              </Field>
+            </div>
+          </SectionCard>
 
-        <SectionCard step="04" title="Sizes &amp; Prices" description="At least one size is required.">
-          <div className="space-y-5">
-            {values.sizes.map((size, i) => (
-              <div key={i} className="border border-line">
-                <div className="flex items-center justify-between border-b border-line bg-paper-2 px-4 py-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft">
-                    Size {i + 1}
-                  </span>
-                  {values.sizes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => update("sizes", values.sizes.filter((_, idx) => idx !== i))}
-                      className="text-xs font-semibold uppercase tracking-[0.08em] text-red-700 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <Field label="Label">
-                      <Input
-                        required
-                        value={size.label}
-                        onChange={(e) => updateSize(i, { label: e.target.value })}
-                        placeholder="30 ml"
-                      />
-                    </Field>
-                    <Field label="Volume (ml)">
-                      <Input
-                        required
-                        type="number"
-                        value={size.volumeMl}
-                        onChange={(e) => updateSize(i, { volumeMl: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="SKU">
-                      <Input
-                        required
-                        value={size.sku}
-                        onChange={(e) => updateSize(i, { sku: e.target.value })}
-                        placeholder="SP-XXX-030"
-                      />
-                    </Field>
-                    <Field label="Price (₹)">
-                      <Input
-                        required
-                        type="number"
-                        value={size.price}
-                        onChange={(e) => updateSize(i, { price: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Compare-at price (₹, optional)">
-                      <Input
-                        type="number"
-                        value={size.compareAtPrice}
-                        onChange={(e) => updateSize(i, { compareAtPrice: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-                  <div className="mt-4 flex flex-wrap items-end gap-6 border-t border-line pt-4">
-                    <div>
-                      <span className="text-xs font-medium text-ink-soft">Size photo</span>
-                      <div className="mt-1.5 flex items-center gap-3">
-                        {size.image && (
-                          <div className="relative h-16 w-14 overflow-hidden border border-line">
-                            <Image src={size.image} alt="" fill sizes="56px" className="object-cover" />
+          <SectionCard step="04" title="Sizes, Prices &amp; Discounts" description="At least one size is required.">
+            <div className="space-y-5">
+              {values.sizes.map((size, i) => {
+                const summary = size.onSale ? discountSummary(size.price, size.compareAtPrice) : null;
+                return (
+                  <div key={i} className="border border-line">
+                    <div className="flex items-center justify-between border-b border-line bg-paper-2 px-4 py-2">
+                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft">
+                        Size {i + 1}
+                      </span>
+                      {values.sizes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => update("sizes", values.sizes.filter((_, idx) => idx !== i))}
+                          className="text-xs font-semibold uppercase tracking-[0.08em] text-red-700 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Size (ml)">
+                          <Input
+                            required
+                            type="number"
+                            value={size.volumeMl}
+                            onChange={(e) => handleVolumeChange(i, e.target.value)}
+                            placeholder="30"
+                          />
+                        </Field>
+                        <Field label="Price (₹) — what customers pay">
+                          <Input
+                            required
+                            type="number"
+                            value={size.price}
+                            onChange={(e) => updateSize(i, { price: e.target.value })}
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="mt-4 border-t border-line pt-4">
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-[var(--color-ink)]"
+                            checked={size.onSale}
+                            onChange={(e) =>
+                              updateSize(i, {
+                                onSale: e.target.checked,
+                                compareAtPrice: e.target.checked ? size.compareAtPrice : "",
+                              })
+                            }
+                          />
+                          This size is on sale (apply a discount)
+                        </label>
+                        {size.onSale && (
+                          <div className="mt-3">
+                            <Field label="MRP (₹) — the higher price, shown crossed out">
+                              <Input
+                                type="number"
+                                value={size.compareAtPrice}
+                                onChange={(e) => updateSize(i, { compareAtPrice: e.target.value })}
+                                placeholder="e.g. 2999"
+                              />
+                            </Field>
+                            <p className={`mt-2 text-xs ${summary ? "text-gold-ink" : "text-ink-soft"}`}>
+                              {summary ??
+                                (size.price
+                                  ? `MRP must be higher than the price above (₹${size.price}). This is the price customers actually pay.`
+                                  : "MRP must be higher than the price above — that's the price customers actually pay.")}
+                            </p>
                           </div>
                         )}
-                        <UploadButton
-                          label={size.image ? "Replace" : "Upload"}
-                          onFiles={(files) => handleSizeImageUpload(i, "image", files)}
-                        />
                       </div>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-ink-soft">Thumbnail (optional)</span>
-                      <div className="mt-1.5 flex items-center gap-3">
-                        {size.thumb && (
-                          <div className="relative h-16 w-14 overflow-hidden border border-line">
-                            <Image src={size.thumb} alt="" fill sizes="56px" className="object-cover" />
-                          </div>
-                        )}
-                        <UploadButton
-                          label={size.thumb ? "Replace" : "Upload"}
-                          onFiles={(files) => handleSizeImageUpload(i, "thumb", files)}
-                        />
+
+                      <div className="mt-4 border-t border-line pt-4">
+                        <span className="text-xs font-medium text-ink-soft">Size photo</span>
+                        <div className="mt-1.5 flex items-center gap-3">
+                          {size.image && (
+                            <div className="relative h-16 w-14 overflow-hidden border border-line">
+                              <Image src={size.image} alt="" fill sizes="56px" className="object-cover" />
+                            </div>
+                          )}
+                          <UploadButton
+                            label={size.image ? "Replace" : "Upload"}
+                            onFiles={(files) => handleSizeImageUpload(i, files)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 border-t border-line pt-4">
+                        <Field label="Product code (SKU)">
+                          <Input value={size.sku} onChange={(e) => updateSize(i, { sku: e.target.value })} />
+                        </Field>
+                        <p className="mt-1.5 text-xs text-ink-soft">
+                          We fill this in automatically — only change it if you already use your own codes.
+                        </p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => update("sizes", [...values.sizes, { ...emptySize }])}
-            className="text-xs font-semibold uppercase tracking-[0.08em] hover:text-gold-ink"
-          >
-            + Add another size
-          </button>
-        </SectionCard>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                update("sizes", [
+                  ...values.sizes,
+                  { ...emptySize, sku: suggestSku(values.slug, "") },
+                ])
+              }
+              className="text-xs font-semibold uppercase tracking-[0.08em] hover:text-gold-ink"
+            >
+              + Add another size
+            </button>
+          </SectionCard>
         </div>
       </div>
 

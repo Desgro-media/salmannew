@@ -24,7 +24,7 @@ export async function SignatureCollections() {
         <HorizontalScroller>
           {products.map((product, i) => {
             const cheapest = [...product.sizes].sort((a, b) => a.price - b.price)[0];
-            const onSale = Boolean(cheapest.compareAtPrice);
+            const onSale = cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price;
 
             return (
               <Reveal key={product.id} delay={(i % 3) * 0.06} className="w-[58vw] max-w-[230px] shrink-0 sm:w-64 sm:max-w-none">
@@ -47,7 +47,7 @@ export async function SignatureCollections() {
                     <h3 className="mt-4 font-bold">{product.name}</h3>
                     <p className="mt-1 text-sm">
                       <span className="font-semibold">From {formatPrice(cheapest.price)}</span>
-                      {cheapest.compareAtPrice && (
+                      {cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price && (
                         <span className="ml-2 text-ink-soft line-through">
                           {formatPrice(cheapest.compareAtPrice)}
                         </span>
