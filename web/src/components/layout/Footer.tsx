@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/products";
+import { LOCATION_MAPS_DIRECTIONS_URL } from "@/lib/contact-info";
 
 export async function Footer() {
   const products = await getAllProducts();
@@ -74,7 +75,16 @@ export async function Footer() {
           <ul className="mt-5 space-y-3 text-sm text-paper/80">
             <li>hello@salmanperfumes.com</li>
             <li>+91 98765 43210</li>
-            <li>Mumbai, India</li>
+            <li>
+              <a
+                href={LOCATION_MAPS_DIRECTIONS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-gold transition-colors"
+              >
+                Markaz Complex, Kozhikode
+              </a>
+            </li>
           </ul>
         </div>
       </div>
