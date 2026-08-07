@@ -36,7 +36,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
     <div>
       <div className="flex items-baseline gap-3">
         <span className="text-2xl font-bold">{formatPrice(size.price)}</span>
-        {size.compareAtPrice && (
+        {size.compareAtPrice != null && size.compareAtPrice > size.price && (
           <span className="text-base text-ink-soft line-through">
             {formatPrice(size.compareAtPrice)}
           </span>
