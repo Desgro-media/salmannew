@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/products";
 import { ShopGrid } from "@/components/shop/ShopGrid";
+import { SHOP_FILTERS } from "@/lib/shop-filters";
 
 export const metadata: Metadata = {
   title: "Shop — Salman Perfumes",
   description: "Browse all six Salman Perfumes eaux de parfum.",
 };
 
-export default async function ShopPage() {
-  const products = await getAllProducts();
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const [products, { filter }] = await Promise.all([getAllProducts(), searchParams]);
+  const initialFilter = SHOP_FILTERS.find((f) => f === filter);
 
   return (
     <div className="pt-16 md:pt-20">
@@ -20,7 +26,7 @@ export default async function ShopPage() {
       </div>
 
       <div className="container-grid py-12 md:py-16">
-        <ShopGrid products={products} />
+        <ShopGrid products={products} initialFilter={initialFilter} />
       </div>
     </div>
   );
