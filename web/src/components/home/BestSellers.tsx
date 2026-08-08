@@ -36,8 +36,9 @@ export async function BestSellers() {
                       src={cutoutSrc(product.images[0])}
                       alt={product.fullName}
                       fill
+                      draggable={false}
                       sizes="(min-width: 640px) 256px, 42vw"
-                      className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                      className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                     <div
                       aria-hidden
