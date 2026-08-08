@@ -70,6 +70,10 @@ export function ProductGallery({
               />
             </motion.div>
           </AnimatePresence>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[22px] shadow-[inset_0_0_48px_22px_var(--color-paper-2)]"
+          />
         </div>
       </div>
     </div>

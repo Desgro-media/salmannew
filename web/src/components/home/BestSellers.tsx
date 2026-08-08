@@ -3,8 +3,8 @@ import Link from "next/link";
 import { getAllProducts } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
-import { ButtonLink } from "@/components/ui/Button";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
+import { cutoutSrc } from "@/lib/product-image";
 
 export async function BestSellers() {
   const products = await getAllProducts();
@@ -19,37 +19,29 @@ export async function BestSellers() {
         <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
           Best Sellers
         </h2>
-        <span className="mt-2 inline-block border-b-2 border-ink pb-1 text-sm font-bold">
-          Best sellers
-        </span>
       </Reveal>
 
       <div className="mt-10 sm:mt-14">
-        <HorizontalScroller>
-          <Reveal className="flex w-[58vw] max-w-[230px] shrink-0 flex-col justify-between rounded-[28px] bg-paper-3 p-6 sm:w-64 sm:max-w-none sm:p-8">
-            <div>
-              <h3 className="text-xl font-black leading-tight sm:text-2xl">Compliment Magnets—</h3>
-              <p className="mt-3 text-sm text-ink-soft">
-                Real-world proven, must-try high-performers.
-              </p>
-            </div>
-            <ButtonLink href="/shop" variant="secondary" className="mt-8 self-start rounded-full">
-              View all
-            </ButtonLink>
-          </Reveal>
-
+        <HorizontalScroller className="sm:justify-center">
           {picks.map((product, i) => {
             const cheapest = [...product.sizes].sort((a, b) => a.price - b.price)[0];
             return (
-              <Reveal key={product.id} delay={(i % 3) * 0.06} className="w-[58vw] max-w-[230px] shrink-0 sm:w-64 sm:max-w-none">
-                <Link href={`/product/${product.slug}`} className="group block">
-                  <div className="relative aspect-square overflow-hidden rounded-[28px] bg-paper-2">
+              <Reveal key={product.id} delay={(i % 3) * 0.06} className="flex w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
+                <Link href={`/product/${product.slug}`} className="group flex h-full w-full flex-col">
+                  <div
+                    className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
+                    style={{ borderColor: `${product.accent}66` }}
+                  >
                     <Image
-                      src={product.images[0]}
+                      src={cutoutSrc(product.images[0])}
                       alt={product.fullName}
                       fill
-                      sizes="(min-width: 640px) 256px, 58vw"
-                      className="object-contain p-6 transition-transform duration-500 ease-out group-hover:scale-105 sm:p-8"
+                      sizes="(min-width: 640px) 256px, 42vw"
+                      className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                    />
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_0_40px_20px_var(--color-paper-2)]"
                     />
                   </div>
                   <h3 className="mt-4 font-bold">{product.name}</h3>
@@ -61,7 +53,7 @@ export async function BestSellers() {
                       </span>
                     )}
                   </p>
-                  <span className="mt-1 inline-block text-xs text-ink-soft underline underline-offset-2 group-hover:text-ink">
+                  <span className="mt-auto inline-block pt-1 text-xs text-ink-soft underline underline-offset-2 group-hover:text-ink">
                     Learn more
                   </span>
                 </Link>

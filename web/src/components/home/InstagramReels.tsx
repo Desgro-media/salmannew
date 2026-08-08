@@ -42,7 +42,7 @@ export function InstagramReels() {
             <Reveal
               key={reel.src}
               delay={i * 0.08}
-              className="w-[58vw] max-w-[230px] shrink-0 sm:w-auto sm:max-w-none"
+              className="w-[42vw] max-w-[180px] shrink-0 sm:w-auto sm:max-w-none"
             >
               <ReelCard src={reel.src} href={reel.href} />
             </Reveal>
