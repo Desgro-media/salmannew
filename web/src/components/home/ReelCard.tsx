@@ -39,7 +39,7 @@ export function ReelCard({ src, href }: { src: string; href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="clip-scroll group relative block aspect-[9/16] overflow-hidden rounded-[28px] bg-ink"
+      className="group relative block aspect-[9/16] overflow-hidden rounded-[28px] bg-ink"
     >
       <video
         ref={videoRef}

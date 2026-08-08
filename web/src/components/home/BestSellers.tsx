@@ -29,7 +29,7 @@ export async function BestSellers() {
               <Reveal key={product.id} delay={(i % 3) * 0.06} className="flex w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
                 <Link href={`/product/${product.slug}`} className="group flex h-full w-full flex-col">
                   <div
-                    className="clip-scroll relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
+                    className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
                     style={{ borderColor: `${product.accent}66` }}
                   >
                     <Image

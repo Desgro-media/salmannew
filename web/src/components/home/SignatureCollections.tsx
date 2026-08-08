@@ -32,7 +32,7 @@ export async function SignatureCollections() {
                 <div className="flex h-full flex-col">
                   <Link href={`/product/${product.slug}`} className="group block">
                     <div
-                      className="clip-scroll relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
+                      className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
                       style={{ borderColor: `${product.accent}66` }}
                     >
                       {onSale && (
