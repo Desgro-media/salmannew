@@ -8,6 +8,7 @@ import type { Product } from "@/lib/types";
 import { priceRangeFor } from "@/lib/price";
 import { formatPrice } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/Button";
+import { cutoutSrc } from "@/lib/product-image";
 
 const ROTATE_MS = 5000;
 
@@ -40,12 +41,16 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
                 className="absolute inset-0"
               >
                 <Image
-                  src={product.images[0]}
+                  src={cutoutSrc(product.images[0])}
                   alt={product.fullName}
                   fill
                   sizes="(min-width: 768px) 45vw, 90vw"
                   className="object-contain"
                   priority={index === 0}
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-[32px] shadow-[inset_0_0_56px_28px_var(--color-ink)]"
                 />
               </motion.div>
             </AnimatePresence>

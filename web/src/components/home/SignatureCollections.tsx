@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
+import { cutoutSrc } from "@/lib/product-image";
 
 export async function SignatureCollections() {
   const products = await getAllProducts();
@@ -27,21 +28,28 @@ export async function SignatureCollections() {
             const onSale = cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price;
 
             return (
-              <Reveal key={product.id} delay={(i % 3) * 0.06} className="w-[58vw] max-w-[230px] shrink-0 sm:w-64 sm:max-w-none">
+              <Reveal key={product.id} delay={(i % 3) * 0.06} className="w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
                 <div className="flex h-full flex-col">
                   <Link href={`/product/${product.slug}`} className="group block">
-                    <div className="relative aspect-square overflow-hidden rounded-[28px] bg-paper-2">
+                    <div
+                      className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
+                      style={{ borderColor: `${product.accent}66` }}
+                    >
                       {onSale && (
                         <span className="absolute left-4 top-4 z-10 rounded-full bg-ink px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-paper">
                           Sale
                         </span>
                       )}
                       <Image
-                        src={product.images[0]}
+                        src={cutoutSrc(product.images[0])}
                         alt={product.fullName}
                         fill
-                        sizes="(min-width: 640px) 256px, 58vw"
-                        className="object-contain p-6 transition-transform duration-500 ease-out group-hover:scale-105 sm:p-8"
+                        sizes="(min-width: 640px) 256px, 42vw"
+                        className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_0_40px_20px_var(--color-paper-2)]"
                       />
                     </div>
                     <h3 className="mt-4 font-bold">{product.name}</h3>

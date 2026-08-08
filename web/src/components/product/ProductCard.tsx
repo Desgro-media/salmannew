@@ -71,21 +71,23 @@ export function ProductCard({ product }: { product: Product }) {
         </button>
       </div>
 
-      <div className="relative mx-auto -mt-2 h-36 w-36 shrink-0 sm:h-44 sm:w-44">
+      <div className="relative mx-auto -mt-2 h-36 w-36 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5 sm:h-44 sm:w-44">
         <div
           aria-hidden
-          className="absolute inset-0 rounded-full opacity-60 blur-2xl transition-opacity duration-500 group-hover:opacity-90"
+          className="absolute inset-0 opacity-60 blur-2xl transition-opacity duration-500 group-hover:opacity-90"
           style={{ background: "radial-gradient(circle, var(--accent) 0%, transparent 70%)" }}
         />
-        <div className="relative h-full w-full overflow-hidden rounded-full ring-1 ring-black/5">
-          <Image
-            src={product.images[0]}
-            alt={product.fullName}
-            fill
-            sizes="(min-width: 1024px) 15vw, (min-width: 640px) 22vw, 40vw"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-          />
-        </div>
+        <Image
+          src={product.images[0]}
+          alt={product.fullName}
+          fill
+          sizes="(min-width: 1024px) 15vw, (min-width: 640px) 22vw, 40vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_0_22px_10px_var(--color-paper-2)]"
+        />
       </div>
 
       <div className="relative z-10 mt-3 flex items-end justify-between gap-3 rounded-[22px] bg-paper/80 p-4 backdrop-blur-sm">

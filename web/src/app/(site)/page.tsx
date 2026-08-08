@@ -13,8 +13,8 @@ export default function Home() {
       <Marquee />
       <BestSellers />
       <SignatureCollections />
-      <FeatureSpotlight />
       <InstagramReels />
+      <FeatureSpotlight />
       <NewsletterBand />
     </>
   );
