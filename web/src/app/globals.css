@@ -121,3 +121,14 @@ html.lenis body {
 .lenis.lenis-stopped {
   overflow: hidden;
 }
+
+/* WebKit (iOS Safari/Chrome) intermittently fails to clip a rounded,
+   overflow-hidden element to its border-radius while it — or an
+   ancestor `overflow-x: auto` row — is actively being scrolled, letting
+   the square-cornered image flash uncropped for a frame. Promoting the
+   element to its own compositor layer keeps the mask stable during
+   scroll. Applied to card media inside horizontal scrollers. */
+.clip-scroll {
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}

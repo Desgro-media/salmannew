@@ -5,6 +5,7 @@ import { SignatureCollections } from "@/components/home/SignatureCollections";
 import { FeatureSpotlight } from "@/components/home/FeatureSpotlight";
 import { InstagramReels } from "@/components/home/InstagramReels";
 import { NewsletterBand } from "@/components/home/NewsletterBand";
+import { BrandBanner } from "@/components/home/BrandBanner";
 
 export default function Home() {
   return (
@@ -12,10 +13,11 @@ export default function Home() {
       <Hero />
       <Marquee />
       <BestSellers />
-      <SignatureCollections />
       <InstagramReels />
+      <SignatureCollections />
       <FeatureSpotlight />
       <NewsletterBand />
+      <BrandBanner />
     </>
   );
 }
