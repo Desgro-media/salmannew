@@ -38,7 +38,7 @@ export function HorizontalScroller({
         data-lenis-prevent
         onScroll={updateScrollState}
         className={clsx(
-          "no-scrollbar flex touch-pan-x gap-5 overflow-x-auto overflow-y-hidden pb-4",
+          "no-scrollbar flex gap-5 overflow-x-auto overflow-y-hidden pb-4",
           className,
         )}
       >
