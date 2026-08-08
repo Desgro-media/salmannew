@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef, type MouseEvent } from "react";
 import {
   motion,
+  useInView,
   useMotionValue,
   useScroll,
   useSpring,
@@ -233,6 +234,11 @@ function FloatingBottle({
 
 export function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  // The floating bottles run infinite looped animations behind a stack of
+  // drop-shadow filters — expensive on mobile GPUs. Unmounting them once
+  // the hero scrolls out of view stops that work completely instead of
+  // burning CPU/GPU for the rest of the page's lifetime.
+  const isInView = useInView(sectionRef, { amount: 0.1 });
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -325,14 +331,15 @@ export function Hero() {
           </motion.div>
         </div>
 
-        {BOTTLES.map((bottle) => (
-          <FloatingBottle
-            key={bottle.src}
-            bottle={bottle}
-            springX={springX}
-            springY={springY}
-          />
-        ))}
+        {isInView &&
+          BOTTLES.map((bottle) => (
+            <FloatingBottle
+              key={bottle.src}
+              bottle={bottle}
+              springX={springX}
+              springY={springY}
+            />
+          ))}
       </motion.div>
 
       {/* bottom row */}

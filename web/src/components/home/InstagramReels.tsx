@@ -1,6 +1,4 @@
-import Image from "next/image";
 import { Reveal } from "@/components/motion/Reveal";
-import { ButtonLink } from "@/components/ui/Button";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
 import { ReelCard } from "@/components/home/ReelCard";
 
@@ -48,21 +46,6 @@ export function InstagramReels() {
             </Reveal>
           ))}
         </HorizontalScroller>
-      </div>
-
-      <Reveal delay={0.15}>
-        <div className="relative mt-20 aspect-[21/9] w-full overflow-hidden bg-ink">
-          <Image
-            src="/logo/mark-gold-transparent.png"
-            alt=""
-            fill
-            className="object-contain p-6 opacity-90 sm:p-12 md:p-24"
-          />
-        </div>
-      </Reveal>
-
-      <div className="mt-10 flex justify-center">
-        <ButtonLink href="/shop">Shop Now</ButtonLink>
       </div>
     </section>
   );
