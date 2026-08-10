@@ -46,7 +46,11 @@ export function ProductCard({ product }: { product: Product }) {
       />
 
       <div className="flex items-start justify-between p-4">
-        <span className="rounded-full bg-paper/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft backdrop-blur-sm">
+        {/* These three surfaces used backdrop-blur-sm. Each product card is
+            repeated across the shop grid, so that was ~3 blurred backdrops per
+            card re-compositing on every scroll frame. Raising the background
+            opacity instead is visually near-identical and costs nothing. */}
+        <span className="rounded-full bg-paper/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
           {label}
         </span>
         <button
@@ -54,7 +58,7 @@ export function ProductCard({ product }: { product: Product }) {
           onClick={() => toggleWishlist(product.slug)}
           aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={liked}
-          className="relative z-20 flex h-8 w-8 items-center justify-center rounded-full bg-paper/70 text-ink-soft backdrop-blur-sm transition-colors duration-300 hover:text-ink"
+          className="relative z-20 flex h-8 w-8 items-center justify-center rounded-full bg-paper/85 text-ink-soft transition-colors duration-300 hover:text-ink"
         >
           <motion.svg
             viewBox="0 0 24 24"
@@ -90,7 +94,7 @@ export function ProductCard({ product }: { product: Product }) {
         />
       </div>
 
-      <div className="relative z-10 mt-3 flex items-end justify-between gap-3 rounded-[22px] bg-paper/80 p-4 backdrop-blur-sm">
+      <div className="relative z-10 mt-3 flex items-end justify-between gap-3 rounded-[22px] bg-paper/90 p-4">
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold tracking-tight">{product.name}</h3>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{product.tagline}</p>

@@ -215,9 +215,18 @@ function FloatingBottle({
             ease: "easeInOut",
           },
         }}
+        // The Image below carries a stack of drop-shadow() filters. Without an
+        // explicit promotion hint the browser re-runs those filters every time
+        // this wrapper moves — and it moves every frame, forever. Promoting
+        // both moving layers lets the filtered bottle rasterize once and then
+        // just be composited.
+        style={{ willChange: "transform" }}
         className="relative h-full w-full"
       >
-        <motion.div style={{ x: parallaxX, y: parallaxY }} className="relative h-full w-full">
+        <motion.div
+          style={{ x: parallaxX, y: parallaxY, willChange: "transform" }}
+          className="relative h-full w-full"
+        >
           <Image
             src={bottle.src}
             alt=""
@@ -303,8 +312,14 @@ export function Hero() {
       {/* giant kinetic wordmark; the four bottles are positioned against this whole
           wrapper (not just the word's own height) so they can trace one continuous
           S-curve from the logo above down to the CTA below */}
+      {/* This wrapper is scroll-scaled, and the wordmark inside it carries a
+          six-layer text-shadow at ~15vw. Scaling text that large forces a
+          re-raster of the whole shadow stack per frame — on a Retina Mac that
+          is 4x the pixels of a 1x display, which is why the page felt heavy
+          there specifically. will-change keeps it on its own composited layer
+          so the scroll transform is a cheap matrix change instead. */}
       <motion.div
-        style={{ scale, opacity, y }}
+        style={{ scale, opacity, y, willChange: "transform, opacity" }}
         className="relative flex flex-1 flex-col items-center justify-center py-6"
       >
         <div className="relative flex w-full items-center justify-center">

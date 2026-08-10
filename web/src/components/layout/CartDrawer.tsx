@@ -26,7 +26,10 @@ export function CartDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[60] bg-ink/40 backdrop-blur-[2px]"
+            // A backdrop-blur here blurs the entire viewport while the overlay
+            // fades in, which stalls the drawer's slide animation. A slightly
+            // darker scrim reads the same and animates on the compositor.
+            className="fixed inset-0 z-[60] bg-ink/50"
             onClick={close}
           />
           <motion.aside

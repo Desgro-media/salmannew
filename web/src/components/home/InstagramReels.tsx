@@ -1,11 +1,10 @@
 import { Reveal } from "@/components/motion/Reveal";
-import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
-import { ReelCard } from "@/components/home/ReelCard";
+import { ReelRow, type Reel } from "@/components/home/ReelRow";
 
 const INSTAGRAM_PROFILE =
   "https://www.instagram.com/salman.perfumes_?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 
-const REELS = [
+const REELS: Reel[] = [
   { src: "/reels/1.mp4", href: "https://www.instagram.com/reels/DWf0V0vEezB/" },
   { src: "/reels/2.mp4", href: "https://www.instagram.com/reels/DQ1EHpnkf6k/" },
   { src: "/reels/3.mp4", href: "https://www.instagram.com/reels/DVyGKvXke4v/" },
@@ -35,17 +34,7 @@ export function InstagramReels() {
       </div>
 
       <div className="mt-10 sm:mt-14">
-        <HorizontalScroller className="sm:grid sm:grid-cols-3 sm:overflow-visible">
-          {REELS.map((reel, i) => (
-            <Reveal
-              key={reel.src}
-              delay={i * 0.08}
-              className="w-[42vw] max-w-[180px] shrink-0 sm:w-auto sm:max-w-none"
-            >
-              <ReelCard src={reel.src} href={reel.href} />
-            </Reveal>
-          ))}
-        </HorizontalScroller>
+        <ReelRow reels={REELS} />
       </div>
     </section>
   );

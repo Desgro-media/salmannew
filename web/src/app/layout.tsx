@@ -6,7 +6,9 @@ import { SmoothScroll } from "@/components/motion/SmoothScroll";
 const archivo = Archivo({
   variable: "--font-archivo",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  // 800 was listed but never used — font-extrabold appears nowhere in src.
+  // Each listed weight is a separate woff2 the browser fetches.
+  weight: ["400", "500", "600", "700", "900"],
 });
 
 export const metadata: Metadata = {
