@@ -21,6 +21,9 @@ export default function AdminDashboardLayout({
               <Link href="/admin/products/new" className="hover:text-ink">
                 New Product
               </Link>
+              <Link href="/admin/reviews" className="hover:text-ink">
+                Reviews
+              </Link>
             </nav>
           </div>
           <LogoutButton />
