@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 import { prisma } from "@/lib/db";
 import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
 import { formatPrice } from "@/lib/format";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 
 function priceRange(sizes: { price: number }[]): { min: number; max: number } {
   const prices = sizes.map((s) => s.price);
@@ -140,6 +141,7 @@ export default async function AdminProductsPage() {
                         >
                           Purchasers
                         </Link>
+                        <DeleteProductButton productId={row.id} productName={row.name} />
                       </div>
                     </td>
                   </tr>
