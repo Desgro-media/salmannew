@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "// build": "The homepage is prerendered and queries the DB during `next build`, so the schema has to exist before the export runs — otherwise a new table fails the build with P2021 rather than at runtime.",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
