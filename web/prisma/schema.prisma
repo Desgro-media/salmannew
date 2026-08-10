@@ -47,8 +47,34 @@ model Product {
   isArchived    Boolean       @default(false)
   sizes         ProductSize[]
   orderItems    OrderItem[]
+  reviews       Review[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating     Int
+  title      String?
+  body       String   @db.Text
+  photos     String[]
+  // Resolved once, when the review is written, rather than joined on read:
+  // the badge should reflect whether they had actually bought it at the time,
+  // and it keeps the product-page query off the orders table entirely.
+  verifiedPurchase Boolean @default(false)
+  // "Publish immediately, remove later" — admins flip this instead of deleting
+  // so a hidden review can be restored and the author can't silently repost.
+  isHidden   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // One review per customer per product; posting again edits the existing one.
+  @@unique([productId, customerId])
+  @@index([productId, isHidden, createdAt])
 }
 
 model ProductSize {
@@ -81,6 +107,7 @@ model Customer {
   pincode      String?
   createdAt    DateTime @default(now())
   orders       Order[]
+  reviews      Review[]
 }
 
 model Order {

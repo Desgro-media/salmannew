@@ -1,156 +1,186 @@
-// Curated customer reviews, shown on the homepage. This is editorial content
-// the shop controls — not user-generated — so it lives in code alongside
-// contact-info.ts rather than in the database. Edit this file to change what
-// the storefront shows.
-//
-// `productSlug` must match a Product.slug in the database: the card links to
-// /product/<slug>, so rename these in step with any slug change.
+import { prisma } from "./db";
 
-export interface Review {
+export interface ReviewAuthor {
   id: string;
+  /** Display name, already shortened to "First L." for public rendering. */
   name: string;
-  city: string;
-  /** Whole stars, 1–5. */
-  rating: number;
-  productSlug: string;
-  /** Display label for the product, e.g. "Oud Lavender". */
-  productName: string;
-  title: string;
-  body: string;
-  /** ISO date (YYYY-MM-DD). Displayed, and used to sort newest first. */
-  date: string;
-  /** True when the reviewer was matched to a real order at publishing time. */
-  verified: boolean;
 }
 
-const REVIEWS: Review[] = [
-  {
-    id: "r-aisha-oud-lavender",
-    name: "Aisha Rahman",
-    city: "Kozhikode",
-    rating: 5,
-    productSlug: "oud-lavender",
-    productName: "Oud Lavender",
-    title: "Still there at the end of the day",
-    body: "I sprayed it before the morning commute and could still catch it when I got home. The lavender keeps the oud from getting heavy — it reads warm rather than smoky.",
-    date: "2026-07-28",
-    verified: true,
-  },
-  {
-    id: "r-nikhil-imperial",
-    name: "Nikhil Menon",
-    city: "Bengaluru",
-    rating: 5,
-    productSlug: "imperial",
-    productName: "Imperial",
-    title: "My default for evenings out",
-    body: "Two sprays is plenty. It opens sharp and settles into something much softer after twenty minutes, which is exactly what I wanted from an oriental.",
-    date: "2026-07-19",
-    verified: true,
-  },
-  {
-    id: "r-fathima-orchid",
-    name: "Fathima Nasrin",
-    city: "Kochi",
-    rating: 5,
-    productSlug: "orchid",
-    productName: "Orchid",
-    title: "Floral without being sweet",
-    body: "I usually avoid florals because they turn syrupy on me. This one stays clean the whole way through. Three people at work asked what I was wearing.",
-    date: "2026-07-11",
-    verified: true,
-  },
-  {
-    id: "r-arjun-akhdar",
-    name: "Arjun Pillai",
-    city: "Thrissur",
-    rating: 4,
-    productSlug: "akhdar",
-    productName: "Akhdar",
-    title: "Perfect for the humidity here",
-    body: "Genuinely fresh — green and a little citrusy — and it survives a Kerala afternoon. Only reason it isn't five stars is that I wish it lasted an hour or two longer.",
-    date: "2026-06-30",
-    verified: true,
-  },
-  {
-    id: "r-sana-latheer",
-    name: "Sana Kabeer",
-    city: "Malappuram",
-    rating: 5,
-    productSlug: "latheer",
-    productName: "Latheer",
-    title: "Clean musk, done properly",
-    body: "It smells like good soap and warm skin, which is the highest compliment I can give a musk. I ordered the larger bottle on the second go.",
-    date: "2026-06-22",
-    verified: true,
-  },
-  {
-    id: "r-rohan-lather",
-    name: "Rohan Varghese",
-    city: "Kannur",
-    rating: 5,
-    productSlug: "lather",
-    productName: "Lather",
-    title: "Bought it for my brother, kept it",
-    body: "Soft, close to the skin, not the kind of thing that announces itself across a room. Ended up ordering a second bottle so he could actually have his.",
-    date: "2026-06-14",
-    verified: true,
-  },
-  {
-    id: "r-meera-imperial",
-    name: "Meera Suresh",
-    city: "Kozhikode",
-    rating: 4,
-    productSlug: "imperial",
-    productName: "Imperial",
-    title: "Packaging is genuinely nice",
-    body: "Arrived in three days, boxed well, nothing rattling. The scent is richer than I expected from the description — start with one spray and work up.",
-    date: "2026-06-02",
-    verified: true,
-  },
-  {
-    id: "r-hari-oud-lavender",
-    name: "Hari Krishnan",
-    city: "Kollam",
-    rating: 5,
-    productSlug: "oud-lavender",
-    productName: "Oud Lavender",
-    title: "The one people ask about",
-    body: "I've been through a lot of oud fragrances and most of them are too much. This sits close and stays balanced. It's the only bottle I've finished.",
-    date: "2026-05-24",
-    verified: true,
-  },
-];
+export interface ProductReview {
+  id: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  photos: string[];
+  verifiedPurchase: boolean;
+  author: ReviewAuthor;
+  createdAt: Date;
+}
 
-/** Reviews in display order — newest first. */
-export function getReviews(): Review[] {
-  return [...REVIEWS].sort((a, b) => b.date.localeCompare(a.date));
+export interface HomepageReview extends ProductReview {
+  productSlug: string;
+  productName: string;
 }
 
 export interface ReviewSummary {
   count: number;
-  /** Mean rating rounded to one decimal, or null when there are no reviews. */
+  /** Mean rating to one decimal, or null when there are no reviews. */
   average: number | null;
+  /** Counts keyed 1-5, always present so the bars can render zeroes. */
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
 }
 
-export function getReviewSummary(): ReviewSummary {
-  if (REVIEWS.length === 0) return { count: 0, average: null };
+// Reviews are public, so surnames get initialled rather than printed in full.
+// Done here, in the only place review rows become view models, so no caller
+// can leak the full name by accident.
+function displayName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Anonymous";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
 
-  const total = REVIEWS.reduce((sum, review) => sum + review.rating, 0);
+const reviewSelect = {
+  id: true,
+  rating: true,
+  title: true,
+  body: true,
+  photos: true,
+  verifiedPurchase: true,
+  createdAt: true,
+  customer: { select: { id: true, fullName: true } },
+} as const;
+
+type ReviewRow = {
+  id: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  photos: string[];
+  verifiedPurchase: boolean;
+  createdAt: Date;
+  customer: { id: string; fullName: string };
+};
+
+function toReview(row: ReviewRow): ProductReview {
   return {
-    count: REVIEWS.length,
-    average: Math.round((total / REVIEWS.length) * 10) / 10,
+    id: row.id,
+    rating: row.rating,
+    title: row.title,
+    body: row.body,
+    photos: row.photos,
+    verifiedPurchase: row.verifiedPurchase,
+    author: { id: row.customer.id, name: displayName(row.customer.fullName) },
+    createdAt: row.createdAt,
+  };
+}
+
+export async function getProductReviews(productId: string): Promise<ProductReview[]> {
+  const rows = await prisma.review.findMany({
+    where: { productId, isHidden: false },
+    select: reviewSelect,
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(toReview);
+}
+
+const EMPTY_DISTRIBUTION: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+export async function getProductReviewSummary(productId: string): Promise<ReviewSummary> {
+  const grouped = await prisma.review.groupBy({
+    by: ["rating"],
+    where: { productId, isHidden: false },
+    _count: { rating: true },
+  });
+
+  const distribution = { ...EMPTY_DISTRIBUTION };
+  let count = 0;
+  let total = 0;
+
+  for (const group of grouped) {
+    const rating = group.rating as 1 | 2 | 3 | 4 | 5;
+    const n = group._count.rating;
+    if (rating >= 1 && rating <= 5) distribution[rating] = n;
+    count += n;
+    total += rating * n;
+  }
+
+  return {
+    count,
+    average: count === 0 ? null : Math.round((total / count) * 10) / 10,
+    distribution,
+  };
+}
+
+/** The one review the signed-in customer has already left, if any. */
+export async function getOwnReview(
+  productId: string,
+  customerId: string,
+): Promise<ProductReview | null> {
+  const row = await prisma.review.findUnique({
+    where: { productId_customerId: { productId, customerId } },
+    select: reviewSelect,
+  });
+  return row ? toReview(row) : null;
+}
+
+/**
+ * Best reviews across the whole catalog, for the homepage band. Sorted by
+ * rating then recency, and biased toward ones with a photo or a title so the
+ * cards have something to show.
+ */
+export async function getFeaturedReviews(limit = 8): Promise<HomepageReview[]> {
+  const rows = await prisma.review.findMany({
+    where: { isHidden: false, rating: { gte: 4 } },
+    select: {
+      ...reviewSelect,
+      product: { select: { slug: true, name: true } },
+    },
+    orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
+    take: limit,
+  });
+
+  return rows.map((row) => ({
+    ...toReview(row),
+    productSlug: row.product.slug,
+    productName: row.product.name,
+  }));
+}
+
+export async function getSiteReviewSummary(): Promise<ReviewSummary> {
+  const grouped = await prisma.review.groupBy({
+    by: ["rating"],
+    where: { isHidden: false },
+    _count: { rating: true },
+  });
+
+  const distribution = { ...EMPTY_DISTRIBUTION };
+  let count = 0;
+  let total = 0;
+
+  for (const group of grouped) {
+    const rating = group.rating as 1 | 2 | 3 | 4 | 5;
+    const n = group._count.rating;
+    if (rating >= 1 && rating <= 5) distribution[rating] = n;
+    count += n;
+    total += rating * n;
+  }
+
+  return {
+    count,
+    average: count === 0 ? null : Math.round((total / count) * 10) / 10,
+    distribution,
   };
 }
 
 const monthFormatter = new Intl.DateTimeFormat("en-IN", {
   month: "long",
   year: "numeric",
-  // Dates are plain calendar days, so pin the zone to stop a server in one
-  // timezone and a browser in another from rendering different months.
+  // Pin the zone so a server in one timezone and a browser in another can't
+  // render different months for the same review.
   timeZone: "UTC",
 });
 
-export function formatReviewDate(isoDate: string): string {
-  return monthFormatter.format(new Date(`${isoDate}T00:00:00Z`));
+export function formatReviewDate(date: Date): string {
+  return monthFormatter.format(date);
 }

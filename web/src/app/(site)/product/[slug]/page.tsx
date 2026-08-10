@@ -7,6 +7,7 @@ import { ProductSelectionProvider } from "@/lib/product-selection-context";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { ProductCard } from "@/components/product/ProductCard";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { Reveal } from "@/components/motion/Reveal";
 
 // Products are admin-managed in the DB now, so params can't be enumerated
@@ -95,6 +96,8 @@ export default async function ProductPage({
           </div>
         </div>
       </ProductSelectionProvider>
+
+      <ProductReviews productId={product.id} productName={product.name} />
 
       {related.length > 0 && (
         <section className="container-grid border-t border-line py-20 md:py-28">
