@@ -69,6 +69,20 @@ model ProductSize {
   @@index([productId])
 }
 
+model Customer {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  createdAt    DateTime @default(now())
+  orders       Order[]
+}
+
 model Order {
   id                String      @id @default(cuid())
   orderNumber       String      @unique
@@ -76,6 +90,8 @@ model Order {
   subtotal          Int
   shipping          Int         @default(0)
   total             Int
+  customerId        String?
+  customer          Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerFullName  String
   customerEmail     String
   customerPhone     String
@@ -88,6 +104,7 @@ model Order {
   createdAt         DateTime    @default(now())
 
   @@index([customerEmail])
+  @@index([customerId])
 }
 
 // Denormalizes name/price/image/sizeLabel/sku at purchase time so historical

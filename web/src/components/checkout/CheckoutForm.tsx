@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,6 +28,7 @@ export function CheckoutForm() {
   const clear = useCart((s) => s.clear);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [customer, setCustomer] = useState<CustomerDetails>({
     fullName: "",
     email: "",
@@ -37,6 +38,17 @@ export function CheckoutForm() {
     state: "",
     pincode: "",
   });
+
+  useEffect(() => {
+    fetch("/api/account/me")
+      .then((res) => res.json())
+      .then((profile: CustomerDetails | null) => {
+        if (!profile) return;
+        setAccountEmail(profile.email);
+        setCustomer(profile);
+      })
+      .catch(() => {});
+  }, []);
 
   const subtotal = mounted ? cartSubtotal(items) : 0;
   const shipping = calculateShipping(subtotal);
@@ -80,7 +92,23 @@ export function CheckoutForm() {
       className="grid grid-cols-1 gap-12 md:grid-cols-12"
     >
       <div className="md:col-span-7">
-        <p className="eyebrow text-ink-soft">Shipping Details</p>
+        <p className="text-xs text-ink-soft">
+          {accountEmail ? (
+            <>Checking out as {accountEmail}.</>
+          ) : (
+            <>
+              Have an account?{" "}
+              <Link
+                href="/account/login?redirect=/checkout"
+                className="text-ink underline underline-offset-2 hover:text-gold-ink"
+              >
+                Log in
+              </Link>{" "}
+              for faster checkout.
+            </>
+          )}
+        </p>
+        <p className="eyebrow mt-4 text-ink-soft">Shipping Details</p>
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
           {FIELDS.map((field) => (
             <label
