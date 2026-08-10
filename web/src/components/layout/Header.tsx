@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCart, cartCount } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { useHasMounted } from "@/lib/use-has-mounted";
+import { useAccountSession } from "@/lib/use-account-session";
 
 const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
@@ -23,6 +24,7 @@ export function Header() {
   const items = useCart((s) => s.items);
   const toggleCart = useCart((s) => s.toggle);
   const wishlistSlugs = useWishlist((s) => s.slugs);
+  const account = useAccountSession();
   const mounted = useHasMounted();
   const count = mounted ? cartCount(items) : 0;
   const wishlistCount = mounted ? wishlistSlugs.length : 0;
@@ -81,6 +83,16 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4 md:gap-6">
+          <Link
+            href={mounted && account ? "/account" : "/account/login"}
+            onClick={() => setMobileOpen(false)}
+            className="hidden items-center gap-2 eyebrow sm:flex"
+            aria-label={mounted && account ? "View account" : "Log in"}
+          >
+            <UserIcon />
+            <span>{mounted && account ? account.fullName.split(" ")[0] : "Login"}</span>
+          </Link>
+
           <Link
             href="/wishlist"
             onClick={() => setMobileOpen(false)}
@@ -168,11 +180,34 @@ export function Header() {
                   </Link>
                 </li>
               ))}
+              <li className="border-b border-line/70 last:border-0">
+                <Link
+                  href={mounted && account ? "/account" : "/account/login"}
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-4 text-lg font-medium"
+                >
+                  {mounted && account ? `Hi, ${account.fullName.split(" ")[0]}` : "Login / Sign Up"}
+                </Link>
+              </li>
             </ul>
           </motion.nav>
         )}
       </AnimatePresence>
     </header>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M4.75 19.25c1.2-3.35 4.02-5 7.25-5s6.05 1.65 7.25 5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
