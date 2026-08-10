@@ -657,7 +657,7 @@ export function ProductForm({
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-paper/95 backdrop-blur-sm">
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-paper/97">
         <div className="container-grid flex items-center justify-between gap-4 py-4">
           {error ? (
             <p className="text-sm text-red-700">{error}</p>

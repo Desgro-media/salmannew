@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart, cartCount } from "@/lib/store/cart";
@@ -27,19 +27,33 @@ export function Header() {
   const count = mounted ? cartCount(items) : 0;
   const wishlistCount = mounted ? wishlistSlugs.length : 0;
 
+  // Lenis drives scroll from rAF, so this fires every frame. Comparing against
+  // a ref keeps it a plain read on all but the two frames that cross the
+  // threshold, instead of a setState call 60+ times a second.
+  const scrolledRef = useRef(false);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => {
+      const next = window.scrollY > 24;
+      if (next === scrolledRef.current) return;
+      scrolledRef.current = next;
+      setScrolled(next);
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
+    // No backdrop-blur here on purpose: this header is fixed, so a backdrop
+    // filter forces the compositor to re-sample and blur the strip behind it
+    // on every scrolled frame — at 2x DPR on a Retina display that is the
+    // single most expensive thing on the page. At 97% opacity the blur was
+    // invisible anyway.
     <header
       className={clsx(
         "fixed inset-x-0 top-0 z-50 transition-colors duration-500",
         scrolled || mobileOpen
-          ? "bg-paper/95 backdrop-blur border-b border-line"
+          ? "bg-paper/97 border-b border-line"
           : "bg-transparent border-b border-transparent",
       )}
     >
