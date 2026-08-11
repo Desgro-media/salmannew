@@ -122,10 +122,13 @@ html.lenis body {
   overflow: hidden;
 }
 
-/* Honour the OS setting. Framer Motion's infinite loops (the drifting hero
-   bottles) and every scroll reveal are decorative, so cutting them costs
-   nothing and removes all continuous animation work for anyone who has asked
-   not to see it. Lenis is switched to native scrolling separately, in
+/* Honour the OS setting. Every transition and CSS animation here is
+   decorative, so cutting them costs nothing and removes the continuous
+   compositing work for anyone who has asked not to see it.
+
+   Note this reaches CSS only — Framer Motion drives its animations from JS and
+   ignores these declarations, so components opt out separately via
+   useReducedMotion() (see Hero.tsx). Lenis is switched to native scrolling in
    SmoothScroll.tsx. */
 @media (prefers-reduced-motion: reduce) {
   *,
