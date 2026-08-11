@@ -70,7 +70,9 @@ export function OrderStatusControl({
               disabled={busy || isCurrent}
               onClick={() => setStatus(status)}
               className={clsx(
-                "border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] transition-colors disabled:cursor-not-allowed",
+                // min-h-11 on phones so each stage is a real touch target;
+                // relaxed from md up where a pointer is doing the aiming
+                "flex min-h-11 items-center border px-3.5 text-xs font-semibold uppercase tracking-[0.06em] transition-colors disabled:cursor-not-allowed md:min-h-0 md:py-1.5",
                 isCurrent
                   ? "border-ink bg-ink text-paper opacity-100"
                   : destructive
@@ -94,7 +96,9 @@ export function OrderStatusControl({
           onChange={(e) => setNote(e.target.value)}
           maxLength={280}
           placeholder="e.g. Handed to BlueDart, AWB 1234567890"
-          className="mt-2 w-full max-w-md border border-line bg-paper px-3 py-2 text-sm outline-none transition-colors focus:border-ink"
+          // 16px on phones: anything smaller makes iOS Safari zoom the page in
+          // on focus, which leaves the admin panned sideways after typing
+          className="mt-2 min-h-11 w-full max-w-md border border-line bg-paper px-3 py-2 text-base outline-none transition-colors focus:border-ink sm:text-sm"
         />
       </label>
       <p className="mt-1.5 text-xs text-ink-soft">

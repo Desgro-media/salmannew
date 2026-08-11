@@ -72,12 +72,16 @@ export default async function AdminOrdersPage() {
         <ul className="mt-8 divide-y divide-line border-y border-line">
           {orders.map((order) => (
             <li key={order.id}>
+              {/* Stacks on phones rather than wrapping: a wrapped
+                  justify-between row drops the right-hand column to its own
+                  line but keeps it right-aligned, which reads as a stray
+                  indent halfway down the card. */}
               <Link
                 href={`/admin/orders/${order.id}`}
-                className="flex flex-wrap items-start justify-between gap-4 py-5 transition-colors hover:bg-paper-2"
+                className="flex flex-col gap-2 py-4 transition-colors hover:bg-paper-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:py-5"
               >
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <span className="font-mono text-sm font-bold">{order.orderNumber}</span>
                     <span
                       className={clsx(
@@ -92,7 +96,8 @@ export default async function AdminOrdersPage() {
                       {ORDER_STATUS_LABEL[order.status]}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-sm">
+                  {/* long addresses have to wrap rather than widen the row */}
+                  <p className="mt-1.5 break-words text-sm">
                     {order.customerFullName}{" "}
                     <span className="text-ink-soft">· {order.customerEmail}</span>
                   </p>
@@ -103,9 +108,11 @@ export default async function AdminOrdersPage() {
                   </p>
                 </div>
 
-                <div className="shrink-0 text-right">
+                {/* side by side under the details on a phone, stacked in the
+                    right-hand column once there is room for one */}
+                <div className="flex items-baseline gap-3 sm:shrink-0 sm:flex-col sm:items-end sm:gap-0 sm:text-right">
                   <p className="text-sm font-bold">{formatPrice(order.total)}</p>
-                  <p className="mt-1 text-xs text-ink-soft">
+                  <p className="text-xs text-ink-soft sm:mt-1">
                     {dateFormatter.format(order.createdAt)}
                   </p>
                 </div>
