@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
 import { formatPrice } from "@/lib/format";
 import { LogoutLink } from "@/components/account/LogoutLink";
+import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +25,16 @@ export default async function AccountPage() {
 
   const orders = await prisma.order.findMany({
     where: { customerId: customer.id },
-    include: { items: true },
+    include: {
+      items: true,
+      statusEvents: { orderBy: { createdAt: "asc" } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
   return (
-    <div className="container-grid py-12 md:py-16">
+    // pt clears the fixed Header, as on every other page under this layout
+    <div className="container-grid pb-12 pt-28 md:pb-16 md:pt-36">
       <div className="flex items-baseline justify-between">
         <div>
           <p className="eyebrow text-ink-soft">Account</p>
@@ -45,7 +51,7 @@ export default async function AccountPage() {
           ) : (
             <div className="mt-4 divide-y divide-line border-y border-line">
               {orders.map((order) => (
-                <div key={order.id} className="py-5">
+                <div key={order.id} className="py-6">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-mono text-sm font-semibold">{order.orderNumber}</p>
                     <p className="text-xs text-ink-soft">
@@ -54,7 +60,7 @@ export default async function AccountPage() {
                         month: "short",
                         year: "numeric",
                       })}{" "}
-                      · {order.status}
+                      · {ORDER_STATUS_LABEL[order.status]}
                     </p>
                   </div>
                   <ul className="mt-3 space-y-1 text-sm text-ink-soft">
@@ -65,6 +71,12 @@ export default async function AccountPage() {
                     ))}
                   </ul>
                   <p className="mt-2 text-sm font-semibold">{formatPrice(order.total)}</p>
+
+                  <OrderTimeline
+                    status={order.status}
+                    events={order.statusEvents}
+                    className="mt-6 border-t border-line pt-6"
+                  />
                 </div>
               ))}
             </div>

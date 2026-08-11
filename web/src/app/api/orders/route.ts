@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { calculateShipping } from "@/lib/shipping";
 import { orderPayloadSchema } from "@/lib/order-schema";
+import { OrderStatus } from "@/lib/order-status";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
 
 export async function POST(request: Request) {
@@ -65,6 +66,12 @@ export async function POST(request: Request) {
         customerState: customer.state,
         customerPincode: customer.pincode,
         estimatedDelivery: estimatedDeliveryDate,
+        // The first checkpoint is raised here rather than by the admin, so the
+        // tracking timeline has something real to show the moment checkout
+        // finishes. adminId stays null — nobody moved it, the order arrived.
+        statusEvents: {
+          create: [{ status: OrderStatus.RECEIVED }],
+        },
         items: {
           create: items.map((item) => {
             const size = sizeById.get(item.sizeId)!;
@@ -104,7 +111,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     orderId: order.orderNumber,
-    status: "received",
+    status: order.status,
     estimatedDelivery: estimatedDeliveryDate.toLocaleDateString("en-IN", {
       day: "numeric",
       month: "long",

@@ -20,11 +20,12 @@ enum Category {
 }
 
 model Admin {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  role         AdminRole @default(ADMIN)
-  createdAt    DateTime  @default(now())
+  id            String             @id @default(cuid())
+  email         String             @unique
+  passwordHash  String
+  role          AdminRole          @default(ADMIN)
+  createdAt     DateTime           @default(now())
+  statusChanges OrderStatusEvent[]
 }
 
 model Product {
@@ -110,15 +111,27 @@ model Customer {
   reviews      Review[]
 }
 
+// Fulfilment checkpoints, in the order a parcel passes through them. CANCELLED
+// is deliberately last and off that line — it is a terminal state that can be
+// reached from anywhere, not a further step along the way.
+enum OrderStatus {
+  RECEIVED
+  PACKED
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
 model Order {
-  id                String      @id @default(cuid())
-  orderNumber       String      @unique
-  status            String      @default("received")
+  id                String             @id @default(cuid())
+  orderNumber       String             @unique
+  status            OrderStatus        @default(RECEIVED)
   subtotal          Int
-  shipping          Int         @default(0)
+  shipping          Int                @default(0)
   total             Int
   customerId        String?
-  customer          Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer          Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerFullName  String
   customerEmail     String
   customerPhone     String
@@ -128,10 +141,33 @@ model Order {
   customerPincode   String
   estimatedDelivery DateTime
   items             OrderItem[]
-  createdAt         DateTime    @default(now())
+  statusEvents      OrderStatusEvent[]
+  createdAt         DateTime           @default(now())
 
   @@index([customerEmail])
   @@index([customerId])
+  @@index([status])
+}
+
+// One row per checkpoint the order has actually reached. Order.status is the
+// current stage; this is how it got there. Kept as an append-only log rather
+// than a set of timestamp columns on Order so the customer-facing timeline can
+// show a real date against every step, and so there is an audit trail of which
+// admin advanced what — a single mutable status field would lose both.
+model OrderStatusEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  // Optional customer-visible line, e.g. a courier name or a delay explanation.
+  note      String?
+  // Null for the RECEIVED event raised by checkout itself, and for any admin
+  // account deleted after acting. SetNull keeps the history rather than the actor.
+  adminId   String?
+  admin     Admin?      @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
+
+  @@index([orderId, createdAt])
 }
 
 // Denormalizes name/price/image/sizeLabel/sku at purchase time so historical
