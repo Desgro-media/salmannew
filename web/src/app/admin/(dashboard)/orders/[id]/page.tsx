@@ -41,7 +41,7 @@ export default async function AdminOrderDetailPage({
     <div>
       <Link
         href="/admin/orders"
-        className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-soft hover:text-ink"
+        className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.1em] text-ink-soft hover:text-ink md:min-h-0"
       >
         ← All orders
       </Link>
