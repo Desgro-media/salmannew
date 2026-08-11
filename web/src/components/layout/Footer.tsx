@@ -26,7 +26,7 @@ export async function Footer() {
         </div>
 
         <div className="md:col-span-2 md:col-start-6">
-          <p className="eyebrow text-paper/50">Shop</p>
+          <p className="eyebrow text-paper/65">Shop</p>
           <ul className="mt-5 space-y-3 text-sm">
             {products.slice(0, 5).map((p) => (
               <li key={p.slug}>
@@ -50,7 +50,7 @@ export async function Footer() {
         </div>
 
         <div className="md:col-span-2">
-          <p className="eyebrow text-paper/50">Company</p>
+          <p className="eyebrow text-paper/65">Company</p>
           <ul className="mt-5 space-y-3 text-sm">
             <li>
               <Link href="/about" className="text-paper/80 hover:text-gold transition-colors">
@@ -71,7 +71,7 @@ export async function Footer() {
         </div>
 
         <div className="col-span-2 md:col-span-3">
-          <p className="eyebrow text-paper/50">Get in touch</p>
+          <p className="eyebrow text-paper/65">Get in touch</p>
           <ul className="mt-5 space-y-3 text-sm text-paper/80">
             <li>hello@salmanperfumes.com</li>
             <li>+91 98765 43210</li>
@@ -90,7 +90,7 @@ export async function Footer() {
       </div>
 
       <div className="border-t border-paper/10">
-        <div className="container-grid flex flex-col gap-3 py-6 text-xs text-paper/50 md:flex-row md:items-center md:justify-between">
+        <div className="container-grid flex flex-col gap-3 py-6 text-xs text-paper/65 md:flex-row md:items-center md:justify-between">
           <p>© {new Date().getFullYear()} Salman Perfumes. All rights reserved.</p>
           <p>Prices in INR · Cruelty-free · Made to linger</p>
         </div>
