@@ -3,15 +3,19 @@
 :root {
   --color-ink: #131110;
   --color-ink-soft: #3a3632;
-  --color-paper: #f7f3ea;
-  --color-paper-2: #efe8d8;
-  --color-paper-3: #e7ded0;
-  --color-line: #d9cfba;
+  /* Cream, not off-white: the ramp keeps a steady ~41deg hue and steps down in
+     lightness, so paper / paper-2 / paper-3 stay a single family and any
+     surface layered on another still separates. Saturation is what reads as
+     "cream" rather than "white" — lightness alone just looks grey. */
+  --color-paper: #f7efdc;
+  --color-paper-2: #f0e5cc;
+  --color-paper-3: #e8dabb;
+  --color-line: #dbcaa8;
   --color-line-strong: #131110;
   --color-gold: #ffc41c;
   --color-gold-deep: #a9782c;
   --color-gold-ink: #6f5420;
-  --color-cream: #f7f3ea;
+  --color-cream: #f7efdc;
 
   --font-display: var(--font-archivo);
 }

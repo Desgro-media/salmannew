@@ -16,21 +16,39 @@ import { MARK_ASPECT, MARK_PATH, MARK_TRANSFORM, MARK_VIEWBOX } from "./mark-pat
 const WORD = "SALMAN";
 
 const MARK_ID = "salman-hero-mark";
+const MARK_FACE_GRADIENT_ID = "salman-hero-mark-face";
 
 // The extruded side wall: copies of the mark stepping back in Z, darkening from
 // the lit face into shadow. Eight is enough to read as one solid body because
 // consecutive slices sit 6px apart, and at the ±12° we allow that is ~1.2px of
 // lateral shift — far narrower than the thinnest stroke in the calligraphy, so
 // they overlap instead of separating into visible plates.
+//
+// The ramp holds its hue near 38deg and stays saturated all the way down, so it
+// darkens through bronze. Letting saturation fall away instead — which is what
+// a naive lightness ramp does — turns the deep slices olive, and the whole mark
+// reads as dirty brass rather than gold.
 const DEPTH_SLICES = [
-  { z: -6, fill: "#dfa81a" },
-  { z: -12, fill: "#c9971d" },
-  { z: -18, fill: "#b3861f" },
-  { z: -24, fill: "#9e7621" },
-  { z: -30, fill: "#8a6722" },
-  { z: -36, fill: "#7a5c22" },
-  { z: -42, fill: "#6f5420" },
-  { z: -48, fill: "#634b1e" },
+  { z: -6, fill: "#eeb015" },
+  { z: -12, fill: "#dda012" },
+  { z: -18, fill: "#cc9010" },
+  { z: -24, fill: "#ba800e" },
+  { z: -30, fill: "#a8710c" },
+  { z: -36, fill: "#96620a" },
+  { z: -42, fill: "#845408" },
+  { z: -48, fill: "#734706" },
+];
+
+// Metal is only legible as metal when its surface varies: a flat fill reads as
+// a sticker no matter how good the extrusion behind it is. This runs a
+// highlight down through the core gold into a deeper edge, lit from the upper
+// left to agree with the shadow the slices cast to the lower right.
+const FACE_STOPS = [
+  { offset: "0%", color: "#ffe89a" },
+  { offset: "22%", color: "#ffd23c" },
+  { offset: "48%", color: "#f9ba12" },
+  { offset: "78%", color: "#dd9d0b" },
+  { offset: "100%", color: "#b87d05" },
 ];
 
 const letterVariants = {
@@ -162,6 +180,13 @@ export function Hero() {
                   counters are holes in the same compound path, and the default
                   nonzero rule would fill them in solid. */}
               <path id={MARK_ID} transform={MARK_TRANSFORM} fillRule="evenodd" d={MARK_PATH} />
+              {/* Angled rather than straight down so the highlight runs across
+                  the strokes instead of along them. */}
+              <linearGradient id={MARK_FACE_GRADIENT_ID} x1="0" y1="0" x2="0.35" y2="1">
+                {FACE_STOPS.map((stop) => (
+                  <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+                ))}
+              </linearGradient>
             </defs>
           </svg>
 
@@ -172,7 +197,10 @@ export function Hero() {
               preserve depth. */}
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, scale: 1.06 }}
-            animate={{ opacity: 0.62, scale: 1 }}
+            // Higher than it was against the old near-white ground: cream is
+            // closer in value to the gold, so a translucent mark washes into it
+            // and the face gradient stops reading as metal.
+            animate={{ opacity: 0.85, scale: 1 }}
             transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
             style={{
               x: markX,
@@ -255,7 +283,7 @@ export function Hero() {
                   aria-hidden
                   focusable="false"
                 >
-                  <use href={`#${MARK_ID}`} fill="var(--color-gold)" />
+                  <use href={`#${MARK_ID}`} fill={`url(#${MARK_FACE_GRADIENT_ID})`} />
                 </svg>
               </motion.div>
             </motion.div>
