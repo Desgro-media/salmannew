@@ -22,19 +22,25 @@ export default function AdminDashboardLayout({
             the links drop to their own scrollable strip beneath. A strip rather
             than a hamburger, because four destinations do not justify hiding
             them behind a tap. */}
-        <div className="container-grid flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 md:gap-y-0 md:py-5">
+        {/* Phones: a 1fr-auto-1fr grid, so the brand is optically centred on the
+            top row no matter how wide the logout button is — centring it with
+            margins instead would drift as that button's label changes. Logout
+            takes the right cell, the links span a second row. From md up the
+            grid switches to the original single flex row and the cell
+            assignments below go inert. */}
+        <div className="container-grid grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 py-3 md:flex md:justify-between md:gap-8 md:py-5">
           <Link
             href="/admin"
-            className="order-1 flex min-h-11 shrink-0 items-center text-sm font-black uppercase tracking-[0.14em] md:min-h-0"
+            className="col-start-2 row-start-1 flex min-h-11 items-center justify-center text-sm font-black uppercase tracking-[0.14em] md:min-h-0 md:justify-start"
           >
             Admin
           </Link>
 
-          <div className="order-2 md:order-3">
+          <div className="col-start-3 row-start-1 justify-self-end md:order-last md:justify-self-auto">
             <LogoutButton />
           </div>
 
-          <nav className="order-3 w-full md:order-2 md:w-auto md:flex-1">
+          <nav className="col-span-3 row-start-2 w-full md:row-start-auto md:w-auto md:flex-1">
             {/* Wraps rather than scrolls sideways: four short links fit two
                 rows, and every destination stays visible. A scroll strip would
                 clip the last one behind an edge nobody thinks to swipe. */}
