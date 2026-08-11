@@ -77,7 +77,7 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
                 {product.description}
               </p>
 
-              <dl className="mt-9 grid grid-cols-3 gap-4 border-t border-paper/15 pt-6 text-xs uppercase tracking-[0.14em] text-paper/50">
+              <dl className="mt-9 grid grid-cols-3 gap-4 border-t border-paper/15 pt-6 text-xs uppercase tracking-[0.14em] text-paper/65">
                 <div>
                   <dt>Top</dt>
                   <dd className="mt-2 normal-case tracking-normal text-paper/90">
