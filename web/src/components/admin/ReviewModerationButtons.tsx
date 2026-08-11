@@ -56,12 +56,12 @@ export function ReviewModerationButtons({
   }
 
   return (
-    <div className="flex shrink-0 gap-2">
+    <div className="flex w-full shrink-0 gap-2 sm:w-auto">
       <button
         type="button"
         onClick={toggleHidden}
         disabled={busy}
-        className="border border-line px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] transition-colors hover:border-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+        className="flex min-h-11 flex-1 items-center justify-center border border-line px-3.5 text-xs font-semibold uppercase tracking-[0.06em] transition-colors hover:border-ink hover:bg-ink hover:text-paper disabled:opacity-50 sm:flex-none md:min-h-0 md:py-1.5"
       >
         {isHidden ? "Restore" : "Hide"}
       </button>
@@ -69,7 +69,7 @@ export function ReviewModerationButtons({
         type="button"
         onClick={remove}
         disabled={busy}
-        className="border border-line px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-red-700 transition-colors hover:border-red-700 hover:bg-red-700 hover:text-paper disabled:opacity-50"
+        className="flex min-h-11 flex-1 items-center justify-center border border-line px-3.5 text-xs font-semibold uppercase tracking-[0.06em] text-red-700 transition-colors hover:border-red-700 hover:bg-red-700 hover:text-paper disabled:opacity-50 sm:flex-none md:min-h-0 md:py-1.5"
       >
         Delete
       </button>

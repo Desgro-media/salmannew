@@ -45,7 +45,7 @@ export function DeleteProductButton({
       type="button"
       onClick={handleDelete}
       disabled={deleting}
-      className="border border-line px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-red-700 transition-colors hover:border-red-700 hover:bg-red-700 hover:text-paper disabled:opacity-50"
+      className="flex min-h-11 items-center justify-center border border-line px-3.5 text-xs font-semibold uppercase tracking-[0.06em] text-red-700 transition-colors hover:border-red-700 hover:bg-red-700 hover:text-paper disabled:opacity-50 md:min-h-0 md:py-1.5"
     >
       {deleting ? "Deleting…" : "Delete"}
     </button>

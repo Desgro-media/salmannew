@@ -379,7 +379,7 @@ export function ProductForm({
                   required
                   value={values.category}
                   onChange={(e) => update("category", e.target.value as ProductFormValues["category"])}
-                  className="mt-1.5 w-full border border-line bg-transparent px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink"
+                  className="mt-1.5 min-h-11 w-full border border-line bg-transparent px-3.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -393,7 +393,7 @@ export function ProductForm({
                   required
                   value={values.concentration}
                   onChange={(e) => update("concentration", e.target.value)}
-                  className="mt-1.5 w-full border border-line bg-transparent px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink"
+                  className="mt-1.5 min-h-11 w-full border border-line bg-transparent px-3.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
                 >
                   {CONCENTRATIONS.map((c) => (
                     <option key={c} value={c}>
@@ -408,7 +408,7 @@ export function ProductForm({
                     type="color"
                     value={/^#[0-9a-fA-F]{6}$/.test(values.accent) ? values.accent : "#131110"}
                     onChange={(e) => update("accent", e.target.value)}
-                    className="h-10 w-14 cursor-pointer border border-line p-0.5"
+                    className="h-11 w-14 cursor-pointer border border-line p-0.5"
                   />
                   <p className="text-xs text-ink-soft">
                     Click the swatch to pick a color. Used for small accents around the site.
@@ -417,19 +417,19 @@ export function ProductForm({
               </Field>
             </div>
             <div className="flex gap-6 border-t border-line pt-5 text-sm">
-              <label className="flex items-center gap-2">
+              <label className="flex min-h-11 cursor-pointer items-center gap-2.5 md:min-h-0">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-[var(--color-ink)]"
+                  className="h-5 w-5 shrink-0 accent-[var(--color-ink)]"
                   checked={values.bestseller}
                   onChange={(e) => update("bestseller", e.target.checked)}
                 />
                 Bestseller
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex min-h-11 cursor-pointer items-center gap-2.5 md:min-h-0">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-[var(--color-ink)]"
+                  className="h-5 w-5 shrink-0 accent-[var(--color-ink)]"
                   checked={values.isNew}
                   onChange={(e) => update("isNew", e.target.checked)}
                 />
@@ -440,7 +440,7 @@ export function ProductForm({
               <button
                 type="button"
                 onClick={() => setShowAdvanced((v) => !v)}
-                className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft hover:text-ink"
+                className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft hover:text-ink md:min-h-0"
               >
                 {showAdvanced ? "Hide advanced settings" : "+ Advanced settings"}
               </button>
@@ -551,7 +551,7 @@ export function ProductForm({
                         <button
                           type="button"
                           onClick={() => update("sizes", values.sizes.filter((_, idx) => idx !== i))}
-                          className="text-xs font-semibold uppercase tracking-[0.08em] text-red-700 hover:underline"
+                          className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.08em] text-red-700 hover:underline md:min-h-0"
                         >
                           Remove
                         </button>
@@ -579,10 +579,10 @@ export function ProductForm({
                       </div>
 
                       <div className="mt-4 border-t border-line pt-4">
-                        <label className="flex items-center gap-2 text-sm">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm md:min-h-0">
                           <input
                             type="checkbox"
-                            className="h-4 w-4 accent-[var(--color-ink)]"
+                            className="h-5 w-5 shrink-0 accent-[var(--color-ink)]"
                             checked={size.onSale}
                             onChange={(e) =>
                               updateSize(i, {
@@ -649,7 +649,7 @@ export function ProductForm({
                   { ...emptySize, sku: suggestSku(values.slug, "") },
                 ])
               }
-              className="text-xs font-semibold uppercase tracking-[0.08em] hover:text-gold-ink"
+              className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.08em] hover:text-gold-ink md:min-h-0"
             >
               + Add another size
             </button>
