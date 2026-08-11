@@ -2,6 +2,8 @@
 // (Product / ProductVariant / Order / OrderItem) so the swap from static data
 // to a real backend later is a data-source change, not a type change.
 
+import type { OrderStatus } from "@prisma/client";
+
 export interface FragranceNotes {
   top: string[];
   heart: string[];
@@ -66,6 +68,6 @@ export interface OrderPayload {
 
 export interface OrderConfirmation {
   orderId: string;
-  status: "received";
+  status: OrderStatus;
   estimatedDelivery: string;
 }

@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
+import { cutoutSrc } from "@/lib/product-image";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { useHasMounted } from "@/lib/use-has-mounted";
@@ -35,22 +36,39 @@ export function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <article
-      style={{ "--accent": product.accent } as CSSProperties}
-      className="group relative flex flex-col overflow-hidden rounded-[28px] border border-black/5 bg-paper-2 shadow-[0_1px_2px_rgba(19,17,16,0.05)] transition-shadow duration-500 ease-out hover:shadow-[0_24px_44px_-20px_rgba(19,17,16,0.25)]"
-    >
+    <article className="group relative flex h-full flex-col">
       <Link
         href={`/product/${product.slug}`}
         aria-label={`View ${product.fullName}`}
         className="absolute inset-0 z-10"
       />
 
-      <div className="flex items-start justify-between p-4">
-        {/* These three surfaces used backdrop-blur-sm. Each product card is
-            repeated across the shop grid, so that was ~3 blurred backdrops per
-            card re-compositing on every scroll frame. Raising the background
-            opacity instead is visually near-identical and costs nothing. */}
-        <span className="rounded-full bg-paper/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
+      {/* Same well as the homepage rows (BestSellers / SignatureCollections):
+          an accent-tinted square holding the background-removed bottle, rather
+          than a cropped circle. Keeping the three surfaces identical is the
+          point — the shop should not read as a different product system. */}
+      <div
+        className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2 transition-shadow duration-500 ease-out group-hover:shadow-[0_24px_44px_-20px_rgba(19,17,16,0.25)]"
+        style={{ borderColor: `${product.accent}66` }}
+      >
+        <Image
+          src={cutoutSrc(product.images[0])}
+          alt={product.fullName}
+          fill
+          draggable={false}
+          sizes="(min-width: 1024px) 30vw, 46vw"
+          className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_0_40px_20px_var(--color-paper-2)]"
+        />
+
+        {/* Both chips used backdrop-blur-sm. A product card repeats across the
+            whole shop grid, so that was two blurred backdrops per card
+            re-compositing on every scroll frame. Raising the background opacity
+            instead is visually near-identical and costs nothing. */}
+        <span className="absolute left-3 top-3 z-20 rounded-full bg-paper/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
           {label}
         </span>
         <button
@@ -58,7 +76,7 @@ export function ProductCard({ product }: { product: Product }) {
           onClick={() => toggleWishlist(product.slug)}
           aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={liked}
-          className="relative z-20 flex h-8 w-8 items-center justify-center rounded-full bg-paper/85 text-ink-soft transition-colors duration-300 hover:text-ink"
+          className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-paper/85 text-ink-soft transition-colors duration-300 hover:text-ink"
         >
           <motion.svg
             viewBox="0 0 24 24"
@@ -75,26 +93,7 @@ export function ProductCard({ product }: { product: Product }) {
         </button>
       </div>
 
-      <div className="relative mx-auto -mt-2 h-36 w-36 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5 sm:h-44 sm:w-44">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-60 blur-2xl transition-opacity duration-500 group-hover:opacity-90"
-          style={{ background: "radial-gradient(circle, var(--accent) 0%, transparent 70%)" }}
-        />
-        <Image
-          src={product.images[0]}
-          alt={product.fullName}
-          fill
-          sizes="(min-width: 1024px) 15vw, (min-width: 640px) 22vw, 40vw"
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_0_22px_10px_var(--color-paper-2)]"
-        />
-      </div>
-
-      <div className="relative z-10 mt-3 flex items-end justify-between gap-3 rounded-[22px] bg-paper/90 p-4">
+      <div className="mt-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold tracking-tight">{product.name}</h3>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{product.tagline}</p>

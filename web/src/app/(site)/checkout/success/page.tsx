@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { ButtonLink } from "@/components/ui/Button";
 
 export const metadata: Metadata = {
@@ -46,8 +47,16 @@ export default async function CheckoutSuccessPage({
         payment was captured and no email was actually sent.
       </p>
 
-      <div className="mt-10">
-        <ButtonLink href="/shop">Continue Shopping</ButtonLink>
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
+        <ButtonLink href={order ? `/track?order=${encodeURIComponent(order)}` : "/track"}>
+          Track Your Order
+        </ButtonLink>
+        <Link
+          href="/shop"
+          className="text-xs font-semibold uppercase tracking-[0.14em] underline underline-offset-4 hover:text-gold-ink"
+        >
+          Continue Shopping
+        </Link>
       </div>
     </div>
   );

@@ -1,25 +1,37 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRef, type MouseEvent } from "react";
 import {
   motion,
-  useInView,
   useMotionValue,
+  useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
-  type MotionValue,
 } from "framer-motion";
 import { ButtonLink } from "@/components/ui/Button";
+import { MARK_ASPECT, MARK_PATH, MARK_TRANSFORM, MARK_VIEWBOX } from "./mark-path";
 
 const WORD = "SALMAN";
 
-// stepped extrusion (hard, decreasing-opacity offsets) plus a soft blurred cast
-// shadow at the end — reads as a chiseled 3D letterform rather than a flat cutout
-const LETTER_SHADOW =
-  "1px 1px 0 rgba(19,17,16,0.55), 2px 2px 0 rgba(19,17,16,0.45), 3px 3px 0 rgba(19,17,16,0.35), 4px 4px 0 rgba(19,17,16,0.26), 5px 5px 0 rgba(19,17,16,0.18), 7px 8px 18px rgba(19,17,16,0.38)";
+const MARK_ID = "salman-hero-mark";
+
+// The extruded side wall: copies of the mark stepping back in Z, darkening from
+// the lit face into shadow. Eight is enough to read as one solid body because
+// consecutive slices sit 6px apart, and at the ±12° we allow that is ~1.2px of
+// lateral shift — far narrower than the thinnest stroke in the calligraphy, so
+// they overlap instead of separating into visible plates.
+const DEPTH_SLICES = [
+  { z: -6, fill: "#dfa81a" },
+  { z: -12, fill: "#c9971d" },
+  { z: -18, fill: "#b3861f" },
+  { z: -24, fill: "#9e7621" },
+  { z: -30, fill: "#8a6722" },
+  { z: -36, fill: "#7a5c22" },
+  { z: -42, fill: "#6f5420" },
+  { z: -48, fill: "#634b1e" },
+];
 
 const letterVariants = {
   hidden: { y: "110%" },
@@ -33,221 +45,13 @@ const letterVariants = {
   }),
 };
 
-interface BottleDrift {
-  /** keyframes are relative offsets from the anchor position, in px, looping back to 0 */
-  x: number[];
-  y: number[];
-  /** keyframes are offsets added to the bottle's base `rotate`, looping back to 0 */
-  rotate: number[];
-  /** independent loop durations for x / y / rotate so the three never sync up */
-  durations: [number, number, number];
-}
-
-interface BottleConfig {
-  src: string;
-  position: string;
-  size: string;
-  rotate: number;
-  entranceDelay: number;
-  floatDelay: number;
-  parallaxDepth: number;
-  drift: BottleDrift;
-  /** CSS filter (usually stacked drop-shadow()s) — replaces the old one-size-fits-all shadow */
-  filter: string;
-  behind?: boolean;
-  /** soft blurred radial highlight seeded behind the bottle — reserved for the hero */
-  glow?: boolean;
-}
-
-// Editorial S-curve: Akhdar opens top-left (near the logo) with generous clear space
-// around it, the curve sweeps right to Imperial — the single hero, crowned on the
-// wordmark's golden-ratio line and never more than ~12% larger than the others — pivots
-// back through Orchid tucked behind the letters as a depth layer, then resolves at
-// Oud Lavender on the right edge as a light counterweight. All four share one tilt
-// family (kept within ±10°) so the rotations read as rhythm, not scatter, and every
-// bottle only grazes a letter's edge rather than covering it.
-const BOTTLES: BottleConfig[] = [
-  {
-    src: "/hero/imperial-cutout.png",
-    position: "left-[61.8%] top-[61%] md:top-[58%]",
-    size: "w-[8.8vw] max-w-[63px] sm:w-[7.5vw] sm:max-w-none md:w-[7.4vw] lg:w-[5.4vw]",
-    rotate: 5,
-    entranceDelay: 0.95,
-    floatDelay: 1.65,
-    parallaxDepth: 14,
-    filter:
-      "drop-shadow(0 3px 5px rgba(19,17,16,0.4)) drop-shadow(0 10px 22px rgba(169,120,44,0.4)) drop-shadow(0 40px 50px rgba(19,17,16,0.35))",
-    glow: true,
-    // damped to ~2/3 of the other bottles' amplitude: the same wander reads as calm
-    // breathing on a small bottle but as wobble on the 100%-scale foreground hero
-    drift: {
-      x: [0, 3, -2, 4, -3, 1, 0],
-      y: [0, -4, 2, -3, 3, -1, 0],
-      rotate: [0, 1, -0.5, 1, -1, 0.5, 0],
-      durations: [16, 14, 15],
-    },
-  },
-  {
-    src: "/hero/akhdar-cutout.png",
-    position: "left-[14%] top-[12%] md:top-[8%]",
-    size: "w-[12vw] max-w-[85px] sm:w-[10.1vw] sm:max-w-none md:w-[10.5vw] lg:w-[7.2vw]",
-    rotate: -8,
-    entranceDelay: 0.7,
-    floatDelay: 1.4,
-    parallaxDepth: 20,
-    filter:
-      "drop-shadow(0 3px 5px rgba(19,17,16,0.32)) drop-shadow(0 20px 26px rgba(19,17,16,0.22))",
-    behind: true,
-    drift: {
-      x: [0, 5, -3, 6, -4, 2, 0],
-      y: [0, -5, 3, -6, 4, -2, 0],
-      rotate: [0, 1.5, -1, 1.5, -1, 1, 0],
-      durations: [12, 10, 13],
-    },
-  },
-  {
-    src: "/hero/oud-lavender-cutout.png",
-    position: "left-[83%] top-[13%] md:top-[20%]",
-    size: "w-[11.7vw] max-w-[84px] sm:w-[9.75vw] sm:max-w-none md:w-[10vw] lg:w-[7.2vw]",
-    rotate: -7,
-    entranceDelay: 1.45,
-    floatDelay: 2.15,
-    parallaxDepth: 16,
-    filter:
-      "drop-shadow(0 3px 5px rgba(19,17,16,0.32)) drop-shadow(0 20px 26px rgba(19,17,16,0.22))",
-    behind: true,
-    drift: {
-      x: [0, -5, 3, -6, 4, -2, 0],
-      y: [0, 5, -3, 6, -4, 2, 0],
-      rotate: [0, -1.5, 1, -1.5, 1, -1, 0],
-      durations: [13, 11, 12],
-    },
-  },
-  {
-    src: "/hero/orchid-cutout.png",
-    position: "left-[36%] md:left-[44%] top-[61%] md:top-[56%]",
-    size: "w-[9.3vw] max-w-[66px] sm:w-[7.9vw] sm:max-w-none md:w-[7.75vw] lg:w-[5.6vw]",
-    rotate: -7,
-    entranceDelay: 1.2,
-    floatDelay: 1.9,
-    parallaxDepth: 10,
-    // thin cool rim-light so it separates from the near-black letter stroke it's tucked behind
-    filter:
-      "drop-shadow(0 0 6px rgba(255,255,255,0.2)) drop-shadow(0 3px 5px rgba(19,17,16,0.35)) drop-shadow(0 20px 28px rgba(19,17,16,0.34))",
-    behind: true,
-    drift: {
-      x: [0, 4, -3, 5, -3, 2, 0],
-      y: [0, -3, 4, -4, 3, -2, 0],
-      rotate: [0, 1.5, -1, 1.5, -1, 1, 0],
-      durations: [11, 9, 10],
-    },
-  },
-];
-
-function FloatingBottle({
-  bottle,
-  springX,
-  springY,
-}: {
-  bottle: BottleConfig;
-  springX: MotionValue<number>;
-  springY: MotionValue<number>;
-}) {
-  const parallaxX = useTransform(
-    springX,
-    [-1, 1],
-    [-bottle.parallaxDepth, bottle.parallaxDepth],
-  );
-  const parallaxY = useTransform(
-    springY,
-    [-1, 1],
-    [-bottle.parallaxDepth * 0.6, bottle.parallaxDepth * 0.6],
-  );
-
-  const [xDuration, yDuration, rotateDuration] = bottle.drift.durations;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -900, rotate: bottle.rotate }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={{
-        y: {
-          type: "spring",
-          visualDuration: 0.9,
-          bounce: 0.42,
-          delay: bottle.entranceDelay,
-        },
-        rotate: {
-          type: "spring",
-          visualDuration: 0.9,
-          bounce: 0.35,
-          delay: bottle.entranceDelay,
-        },
-        opacity: { duration: 0.4, delay: bottle.entranceDelay, ease: "easeOut" },
-      }}
-      className={`pointer-events-none absolute aspect-[561/1625] ${bottle.behind ? "-z-10" : "-z-10 md:z-10"} ${bottle.position} ${bottle.size}`}
-    >
-      {bottle.glow && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-[-45%] z-[5] rounded-full opacity-70 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(closest-side, rgba(255,196,28,0.35), rgba(255,196,28,0) 70%)",
-          }}
-        />
-      )}
-      {/* continuous wander: x, y, and rotate each loop on their own out-of-sync duration
-          so the combined path never reads as a simple back-and-forth */}
-      <motion.div
-        animate={{
-          x: bottle.drift.x,
-          y: bottle.drift.y,
-          rotate: bottle.drift.rotate.map((offset) => bottle.rotate + offset),
-        }}
-        transition={{
-          x: { duration: xDuration, delay: bottle.floatDelay, repeat: Infinity, ease: "easeInOut" },
-          y: { duration: yDuration, delay: bottle.floatDelay + 0.3, repeat: Infinity, ease: "easeInOut" },
-          rotate: {
-            duration: rotateDuration,
-            delay: bottle.floatDelay + 0.6,
-            repeat: Infinity,
-            ease: "easeInOut",
-          },
-        }}
-        // The Image below carries a stack of drop-shadow() filters. Without an
-        // explicit promotion hint the browser re-runs those filters every time
-        // this wrapper moves — and it moves every frame, forever. Promoting
-        // both moving layers lets the filtered bottle rasterize once and then
-        // just be composited.
-        style={{ willChange: "transform" }}
-        className="relative h-full w-full"
-      >
-        <motion.div
-          style={{ x: parallaxX, y: parallaxY, willChange: "transform" }}
-          className="relative h-full w-full"
-        >
-          <Image
-            src={bottle.src}
-            alt=""
-            fill
-            sizes="170px"
-            className="object-contain"
-            style={{ filter: bottle.filter }}
-          />
-        </motion.div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 export function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  // The floating bottles run infinite looped animations behind a stack of
-  // drop-shadow filters — expensive on mobile GPUs. Unmounting them once
-  // the hero scrolls out of view stops that work completely instead of
-  // burning CPU/GPU for the rest of the page's lifetime.
-  const isInView = useInView(sectionRef, { amount: 0.1 });
+  // Cached on hover instead of read per mousemove: getBoundingClientRect()
+  // forces a synchronous layout, and doing that on every pointer event is the
+  // one thing in this section that can stall a frame on a slow device.
+  const rectRef = useRef<DOMRect | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -263,14 +67,30 @@ export function Hero() {
   const springY = useSpring(mvY, { stiffness: 60, damping: 18, mass: 0.6 });
   const wordX = useTransform(springX, [-1, 1], [-16, 16]);
   const wordY = useTransform(springY, [-1, 1], [-10, 10]);
+  // The mark sits behind the letters and drifts the opposite way at about a
+  // third of the throw. Opposed, shorter travel is what sells it as depth
+  // rather than as one flat plate sliding around.
+  const markX = useTransform(springX, [-1, 1], [7, -7]);
+  const markY = useTransform(springY, [-1, 1], [5, -5]);
+  // Turning to face the cursor: moving right swings the left edge forward, and
+  // moving down brings the top forward. Kept to ±12/±9 so the extrusion is
+  // revealed along one side without the mark ever reading as a flat card that
+  // has been knocked over.
+  const tiltY = useTransform(springX, [-1, 1], [-12, 12]);
+  const tiltX = useTransform(springY, [-1, 1], [9, -9]);
 
-  function handlePointerMove(e: MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
+  function handleMouseEnter(e: MouseEvent<HTMLDivElement>) {
+    rectRef.current = e.currentTarget.getBoundingClientRect();
+  }
+
+  function handleMouseMove(e: MouseEvent<HTMLDivElement>) {
+    const rect = rectRef.current ?? e.currentTarget.getBoundingClientRect();
     mvX.set(((e.clientX - rect.left) / rect.width) * 2 - 1);
     mvY.set(((e.clientY - rect.top) / rect.height) * 2 - 1);
   }
 
-  function handlePointerLeave() {
+  function handleMouseLeave() {
+    rectRef.current = null;
     mvX.set(0);
     mvY.set(0);
   }
@@ -278,8 +98,9 @@ export function Hero() {
   return (
     <section
       ref={sectionRef}
-      onMouseMove={handlePointerMove}
-      onMouseLeave={handlePointerLeave}
+      onMouseEnter={handleMouseEnter}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       className="relative flex min-h-[100svh] flex-col justify-between overflow-hidden pt-24 pb-8 md:pt-28 md:pb-10"
     >
       {/* top-left eyebrow */}
@@ -309,19 +130,138 @@ export function Hero() {
         </motion.p>
       </div>
 
-      {/* giant kinetic wordmark; the four bottles are positioned against this whole
-          wrapper (not just the word's own height) so they can trace one continuous
-          S-curve from the logo above down to the CTA below */}
-      {/* This wrapper is scroll-scaled, and the wordmark inside it carries a
-          six-layer text-shadow at ~15vw. Scaling text that large forces a
-          re-raster of the whole shadow stack per frame — on a Retina Mac that
-          is 4x the pixels of a 1x display, which is why the page felt heavy
-          there specifically. will-change keeps it on its own composited layer
-          so the scroll transform is a cheap matrix change instead. */}
+      {/* Giant kinetic wordmark seated on the brand mark. This wrapper is
+          scroll-scaled, and scaling live text re-rasterises the glyphs at each
+          new size — expensive at ~15vw, and 4x worse on a Retina display, which
+          is why the page used to feel heavy there specifically. will-change
+          keeps the whole group on its own composited layer so the scroll
+          transform is a cheap matrix change instead. */}
       <motion.div
         style={{ scale, opacity, y, willChange: "transform, opacity" }}
         className="relative flex flex-1 flex-col items-center justify-center py-6"
       >
+        {/* Brand mark, centred behind the letters. Flex-centred rather than
+            translate-centred so Framer Motion owns `transform` outright and
+            nothing fights it for the property.
+
+            Three nested layers because each owns a different transform with its
+            own lifetime — pointer parallax, a one-shot entrance, and the idle
+            loop. Stacking them beats trying to reconcile all three on one
+            element, and every one animates transform/opacity only, so this
+            whole thing lives on the compositor. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center"
+        >
+          {/* Geometry is declared once and every slice below is a <use> of it,
+              so the ~10KB of path data is paid for a single time no matter how
+              deep the extrusion gets. */}
+          <svg width="0" height="0" className="absolute" aria-hidden focusable="false">
+            <defs>
+              {/* evenodd carries over from the source — the calligraphy's
+                  counters are holes in the same compound path, and the default
+                  nonzero rule would fill them in solid. */}
+              <path id={MARK_ID} transform={MARK_TRANSFORM} fillRule="evenodd" d={MARK_PATH} />
+            </defs>
+          </svg>
+
+          {/* L1 — parallax, sizing, and the group's fade-in. This is also where
+              `perspective` lives: putting it here rather than deeper means the
+              group opacity below can sit on this element without collapsing the
+              3D context, because L1 itself is flat and only its descendants
+              preserve depth. */}
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, scale: 1.06 }}
+            animate={{ opacity: 0.62, scale: 1 }}
+            transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              x: markX,
+              y: markY,
+              aspectRatio: MARK_ASPECT,
+              perspective: "1100px",
+              willChange: "transform, opacity",
+            }}
+            // Sized off viewport height so the mark keeps its proportion to the
+            // wordmark (which is sized off viewport width) rather than
+            // swallowing it on a tall, narrow phone.
+            className="relative h-[42vh] max-h-[470px] sm:h-[56vh] sm:max-h-[680px] lg:h-[74vh] lg:max-h-[880px]"
+          >
+            {/* Bloom sits outside the 3D group on purpose — it carries a 48px
+                blur, and a blurred layer inside a preserved-3d context gets
+                re-rasterised as the group turns. Out here it is a flat glow that
+                only ever animates opacity, which the compositor handles free. */}
+            <motion.div
+              animate={reduceMotion ? undefined : { opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-[-30%] rounded-full blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(closest-side, rgba(255,196,28,0.32), rgba(255,196,28,0) 70%)",
+                willChange: "opacity",
+              }}
+            />
+
+            {/* L2 — idle drift. Durations are deliberately non-harmonic so the
+                four cycles never come back into phase; the mark breathes rather
+                than ticks. The slow rotateY sway is what keeps the extrusion
+                readable on touch devices, where there is no cursor to tilt it. */}
+            <motion.div
+              animate={
+                reduceMotion
+                  ? undefined
+                  : {
+                      scale: [1, 1.04, 1],
+                      y: [0, -12, 0],
+                      rotate: [0, 1.1, 0, -1.1, 0],
+                      rotateY: [0, 9, 0, -9, 0],
+                    }
+              }
+              transition={{
+                scale: { duration: 7, repeat: Infinity, ease: "easeInOut" },
+                y: { duration: 9, repeat: Infinity, ease: "easeInOut" },
+                rotate: { duration: 13, repeat: Infinity, ease: "easeInOut" },
+                rotateY: { duration: 17, repeat: Infinity, ease: "easeInOut" },
+              }}
+              style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+              className="relative h-full w-full"
+            >
+              {/* L3 — the cursor tilt, kept on its own element so it composes
+                  with the sway above instead of fighting it for rotateY. */}
+              <motion.div
+                style={{
+                  rotateX: reduceMotion ? 0 : tiltX,
+                  rotateY: reduceMotion ? 0 : tiltY,
+                  transformStyle: "preserve-3d",
+                  willChange: "transform",
+                }}
+                className="relative h-full w-full"
+              >
+                {DEPTH_SLICES.map((slice) => (
+                  <svg
+                    key={slice.z}
+                    viewBox={MARK_VIEWBOX}
+                    className="absolute inset-0 h-full w-full"
+                    style={{ transform: `translateZ(${slice.z}px)` }}
+                    aria-hidden
+                    focusable="false"
+                  >
+                    <use href={`#${MARK_ID}`} fill={slice.fill} />
+                  </svg>
+                ))}
+                {/* the lit face, sitting at the front of the stack */}
+                <svg
+                  viewBox={MARK_VIEWBOX}
+                  className="absolute inset-0 h-full w-full"
+                  aria-hidden
+                  focusable="false"
+                >
+                  <use href={`#${MARK_ID}`} fill="var(--color-gold)" />
+                </svg>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </div>
+
         <div className="relative flex w-full items-center justify-center">
           <motion.div
             style={{ x: wordX, y: wordY }}
@@ -331,12 +271,11 @@ export function Hero() {
               <span key={i} className="inline-block overflow-hidden leading-none">
                 <motion.span
                   custom={i}
-                  initial="hidden"
+                  initial={reduceMotion ? false : "hidden"}
                   animate="visible"
                   variants={letterVariants}
                   whileHover={{ y: -14, color: "var(--color-gold-deep)" }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  style={{ textShadow: LETTER_SHADOW }}
                   className="inline-block font-sans text-[22vw] font-black leading-none tracking-[-0.05em] text-ink sm:text-[19vw] md:text-[17vw] lg:text-[15vw]"
                 >
                   {char}
@@ -345,16 +284,6 @@ export function Hero() {
             ))}
           </motion.div>
         </div>
-
-        {isInView &&
-          BOTTLES.map((bottle) => (
-            <FloatingBottle
-              key={bottle.src}
-              bottle={bottle}
-              springX={springX}
-              springY={springY}
-            />
-          ))}
       </motion.div>
 
       {/* bottom row */}
