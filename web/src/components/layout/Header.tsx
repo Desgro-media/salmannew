@@ -9,6 +9,12 @@ import { useCart, cartCount } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import { useAccountSession } from "@/lib/use-account-session";
+import {
+  LOCKUP_ASPECT,
+  LOCKUP_PATH,
+  LOCKUP_VIEWBOX,
+  WORDMARK_TRANSFORM,
+} from "@/components/home/wordmark-path";
 
 const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
@@ -76,11 +82,26 @@ export function Header() {
               priority
             />
           </span>
-          <span className="font-semibold tracking-[0.18em] text-sm md:text-base leading-none">
-            SALMAN
-            <span className="block text-[9px] md:text-[10px] tracking-[0.32em] text-ink-soft font-medium mt-0.5">
-              PERFUMES
-            </span>
+          {/* The lockup's own outlines rather than SALMAN / PERFUMES set in the
+              UI sans. One path for both lines, because nothing here animates
+              per letter — the hero is the only place that needs them apart. */}
+          <span
+            className="block h-6 shrink-0 text-ink md:h-7"
+            style={{ aspectRatio: LOCKUP_ASPECT }}
+          >
+            <svg
+              viewBox={LOCKUP_VIEWBOX}
+              className="h-full w-full"
+              aria-hidden
+              focusable="false"
+            >
+              <path
+                transform={WORDMARK_TRANSFORM}
+                fillRule="evenodd"
+                fill="currentColor"
+                d={LOCKUP_PATH}
+              />
+            </svg>
           </span>
         </Link>
 
