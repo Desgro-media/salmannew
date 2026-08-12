@@ -225,11 +225,11 @@ export const products: Product[] = [
     isNew: true,
     sizes: [
       {
-        id: "latheer-50",
-        label: "50 ml",
-        volumeMl: 50,
-        sku: "SP-LTH-050",
-        price: 999,
+        id: "latheer-20",
+        label: "20 ml",
+        volumeMl: 20,
+        sku: "SP-LTH-020",
+        price: 499,
         image: img("latheer", 1),
         thumb: thumb("latheer", 1),
       },
