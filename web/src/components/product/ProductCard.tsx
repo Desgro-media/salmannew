@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { cutoutSrc } from "@/lib/product-image";
@@ -20,7 +21,10 @@ export function ProductCard({ product }: { product: Product }) {
   const toggleWishlist = useWishlist((s) => s.toggle);
   const mounted = useHasMounted();
   const liked = mounted && wishlistSlugs.includes(product.slug);
-  const size = product.sizes[0];
+  // Which size the price and the add button refer to. Defaults to the first,
+  // which is the smallest — sizes arrive ordered by volume.
+  const [sizeIndex, setSizeIndex] = useState(0);
+  const size = product.sizes[sizeIndex] ?? product.sizes[0];
   const label = product.bestseller
     ? "Popular"
     : product.isNew
@@ -111,6 +115,38 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold tracking-tight">{product.name}</h3>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{product.tagline}</p>
+
+          {/* Every size a scent comes in, on the card. Without this the grid
+              shows one price per product with no indication of which bottle it
+              buys, so a 20 ml at ₹499 sat next to a 50 ml at ₹999 looking like
+              the same thing priced differently. Picking one here also sets what
+              the add button drops in the bag.
+
+              Above the card's overlay link, which covers the whole tile — the
+              add button clears it the same way. */}
+          {product.sizes.length > 1 ? (
+            <div className="relative z-20 mt-2 flex flex-wrap gap-1.5">
+              {product.sizes.map((option, i) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSizeIndex(i)}
+                  aria-pressed={i === sizeIndex}
+                  className={clsx(
+                    "rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors duration-200",
+                    i === sizeIndex
+                      ? "border-ink bg-ink text-paper"
+                      : "border-line text-ink-soft hover:border-ink hover:text-ink",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] font-semibold text-ink-soft">{size.label}</p>
+          )}
+
           <p className="mt-2 text-lg font-bold">{formatPrice(size.price)}</p>
         </div>
 
