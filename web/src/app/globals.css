@@ -20,6 +20,13 @@
   --color-gold-deep: #a9782c;
   --color-gold-ink: #6f5420;
   --color-cream: #ebdcc8;
+  /* The square well a bottle sits in, on the shop grid and the homepage rows.
+     White rather than a step in the cream ramp: the cutouts are lit as product
+     shots on white, and against cream the bottles' own highlights read as a
+     dull grey cast. It is the one surface in the app that deliberately leaves
+     the ramp, which is why it has its own token — the well's fill and the
+     vignette that fades the cutout into it must always name the same colour. */
+  --color-well: #ffffff;
 
   --font-display: var(--font-archivo);
 }
@@ -36,6 +43,7 @@
   --color-gold-deep: var(--color-gold-deep);
   --color-gold-ink: var(--color-gold-ink);
   --color-cream: var(--color-cream);
+  --color-well: var(--color-well);
   --font-sans: var(--font-archivo);
 
   --animate-marquee: marquee 28s linear infinite;

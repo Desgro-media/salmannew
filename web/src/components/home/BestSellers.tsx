@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
 import { cutoutSrc } from "@/lib/product-image";
+import { wellSurface } from "@/lib/product-well";
 
 export async function BestSellers() {
   const products = await getAllProducts();
@@ -29,21 +30,24 @@ export async function BestSellers() {
               <Reveal key={product.id} delay={(i % 3) * 0.06} className="flex w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
                 <Link href={`/product/${product.slug}`} className="group flex h-full w-full flex-col">
                   <div
-                    className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
+                    className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-well"
                     style={{ borderColor: `${product.accent}66` }}
                   >
-                    <Image
-                      src={cutoutSrc(product.images[0])}
-                      alt={product.fullName}
-                      fill
-                      draggable={false}
-                      sizes="(min-width: 640px) 256px, 42vw"
-                      className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                    />
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_0_40px_20px_var(--color-paper-2)]"
+                      className="pointer-events-none absolute inset-0"
+                      style={{ background: wellSurface(product.accent) }}
                     />
+                    <div className="absolute inset-[13%]">
+                      <Image
+                        src={cutoutSrc(product.images[0])}
+                        alt={product.fullName}
+                        fill
+                        draggable={false}
+                        sizes="(min-width: 640px) 256px, 42vw"
+                        className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                    </div>
                   </div>
                   <h3 className="mt-4 font-bold">{product.name}</h3>
                   <p className="mt-1 text-sm">

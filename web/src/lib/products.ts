@@ -2,8 +2,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import type { Product } from "./types";
 
+// Archived sizes are withheld from every storefront read: a retired size still
+// has to exist for the orders that reference it, but must not be offered for
+// sale or priced on a card.
 const productWithSizes = Prisma.validator<Prisma.ProductDefaultArgs>()({
-  include: { sizes: { orderBy: { volumeMl: "asc" } } },
+  include: { sizes: { where: { isArchived: false }, orderBy: { volumeMl: "asc" } } },
 });
 
 type ProductRow = Prisma.ProductGetPayload<typeof productWithSizes>;

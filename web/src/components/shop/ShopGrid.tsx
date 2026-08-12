@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "@/components/product/ProductCard";
-import { SHOP_FILTERS, type ShopFilter } from "@/lib/shop-filters";
+import { SHOP_FILTERS, categoryLabel, type ShopFilter } from "@/lib/shop-filters";
 
 const FILTERS = SHOP_FILTERS;
 
@@ -38,7 +38,7 @@ export function ShopGrid({
                 : "border-line text-ink-soft hover:border-ink hover:text-ink",
             )}
           >
-            {cat}
+            {categoryLabel(cat)}
           </button>
         ))}
       </div>
@@ -47,7 +47,7 @@ export function ShopGrid({
         {filtered.length} scent{filtered.length !== 1 && "s"}
       </motion.p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 lg:gap-6">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
         <AnimatePresence mode="popLayout">
           {filtered.map((product) => (
             <motion.div

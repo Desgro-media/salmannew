@@ -11,7 +11,11 @@ enum AdminRole {
   SUPERADMIN
 }
 
+// Prive is the second product line rather than a scent family. Spelled without
+// the accent because enum members must be plain identifiers; the UI puts it
+// back via categoryLabel() in src/lib/shop-filters.ts.
 enum Category {
+  Prive
   Oriental
   Fresh
   Floral
@@ -91,6 +95,11 @@ model ProductSize {
   compareAtPrice Int?
   image          String
   thumb          String
+  // Retiring a size cannot mean deleting the row: OrderItem points here with
+  // onDelete: Restrict, so any size that has ever been bought refuses to go,
+  // and past orders should keep their link regardless. Archiving takes it off
+  // the storefront and leaves history intact — same device as Product.isArchived.
+  isArchived     Boolean     @default(false)
   orderItems     OrderItem[]
 
   @@index([productId])

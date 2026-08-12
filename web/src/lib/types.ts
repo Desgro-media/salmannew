@@ -3,6 +3,7 @@
 // to a real backend later is a data-source change, not a type change.
 
 import type { OrderStatus } from "@prisma/client";
+import type { ProductCategory } from "./shop-filters";
 
 export interface FragranceNotes {
   top: string[];
@@ -27,7 +28,7 @@ export interface Product {
   name: string;
   fullName: string;
   tagline: string;
-  category: "Oriental" | "Fresh" | "Floral" | "Woody" | "Musk";
+  category: ProductCategory;
   description: string;
   story: string;
   notes: FragranceNotes;
