@@ -9,6 +9,7 @@ import { AccordionItem } from "@/components/ui/Accordion";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { Reveal } from "@/components/motion/Reveal";
+import { categoryLabel } from "@/lib/shop-filters";
 
 // Products are admin-managed in the DB now, so params can't be enumerated
 // statically at build time. ISR keeps pages fast while picking up admin
@@ -59,7 +60,7 @@ export default async function ProductPage({
 
           <div className="md:col-span-4 md:col-start-9">
             <span className="inline-block rounded-full bg-paper-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
-              {product.category}
+              {categoryLabel(product.category)}
             </span>
             <h1 className="mt-3 text-4xl font-black tracking-tight">
               {product.name}
@@ -107,7 +108,7 @@ export default async function ProductPage({
               You Might Also Like
             </h2>
           </Reveal>
-          <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 lg:gap-6">
+          <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
             {related.map((p, i) => (
               <Reveal key={p.id} delay={i * 0.08}>
                 <ProductCard product={p} />

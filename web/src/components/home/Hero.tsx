@@ -12,8 +12,14 @@ import {
 } from "framer-motion";
 import { ButtonLink } from "@/components/ui/Button";
 import { MARK_ASPECT, MARK_PATH, MARK_TRANSFORM, MARK_VIEWBOX } from "./mark-path";
+import {
+  LOCKUP_ASPECT,
+  WORDMARK_LETTERS,
+  WORDMARK_SUB,
+  WORDMARK_TRANSFORM,
+} from "./wordmark-path";
 
-const WORD = "SALMAN";
+const WORD = WORDMARK_LETTERS.map((letter) => letter.char).join("");
 
 const MARK_ID = "salman-hero-mark";
 const MARK_FACE_GRADIENT_ID = "salman-hero-mark-face";
@@ -149,11 +155,11 @@ export function Hero() {
       </div>
 
       {/* Giant kinetic wordmark seated on the brand mark. This wrapper is
-          scroll-scaled, and scaling live text re-rasterises the glyphs at each
-          new size — expensive at ~15vw, and 4x worse on a Retina display, which
-          is why the page used to feel heavy there specifically. will-change
-          keeps the whole group on its own composited layer so the scroll
-          transform is a cheap matrix change instead. */}
+          scroll-scaled, and scaling vector artwork re-rasterises it at each new
+          size — expensive at this scale, and 4x worse on a Retina display,
+          which is why the page used to feel heavy there specifically.
+          will-change keeps the whole group on its own composited layer so the
+          scroll transform is a cheap matrix change instead. */}
       <motion.div
         style={{ scale, opacity, y, willChange: "transform, opacity" }}
         className="relative flex flex-1 flex-col items-center justify-center py-6"
@@ -291,12 +297,32 @@ export function Hero() {
         </div>
 
         <div className="relative flex w-full items-center justify-center">
+          {/* Set in the logo's own outlines rather than a font, so the hero and
+              the label on the bottle are the same drawing. The letters are
+              placed off the geometry's percentages instead of being flowed in a
+              row: their boxes overlap where the N's swash sweeps back under the
+              second A, and laying them out as a run would pull that apart.
+
+              Sized by width here, where the mark behind is sized by height —
+              between them they hold the lockup's proportion on any shape of
+              screen. */}
           <motion.div
-            style={{ x: wordX, y: wordY }}
-            className="flex select-none items-center justify-center"
+            style={{ x: wordX, y: wordY, aspectRatio: LOCKUP_ASPECT }}
+            role="img"
+            aria-label={`${WORD} Perfumes`}
+            className="relative w-[92vw] max-w-[1180px] select-none sm:w-[84vw] md:w-[76vw] lg:w-[68vw]"
           >
-            {WORD.split("").map((char, i) => (
-              <span key={i} className="inline-block overflow-hidden leading-none">
+            {WORDMARK_LETTERS.map((letter, i) => (
+              <span
+                key={i}
+                className="absolute overflow-hidden"
+                style={{
+                  left: `${letter.left}%`,
+                  top: `${letter.top}%`,
+                  width: `${letter.width}%`,
+                  height: `${letter.height}%`,
+                }}
+              >
                 <motion.span
                   custom={i}
                   initial={reduceMotion ? false : "hidden"}
@@ -304,12 +330,59 @@ export function Hero() {
                   variants={letterVariants}
                   whileHover={{ y: -14, color: "var(--color-gold-deep)" }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="inline-block font-sans text-[22vw] font-black leading-none tracking-[-0.05em] text-ink sm:text-[19vw] md:text-[17vw] lg:text-[15vw]"
+                  className="block h-full w-full text-ink"
                 >
-                  {char}
+                  {/* evenodd for the same reason as the mark: the counters are
+                      holes in the same compound path per letter. */}
+                  <svg
+                    viewBox={letter.viewBox}
+                    className="h-full w-full"
+                    aria-hidden
+                    focusable="false"
+                  >
+                    <path
+                      transform={WORDMARK_TRANSFORM}
+                      fillRule="evenodd"
+                      fill="currentColor"
+                      d={letter.d}
+                    />
+                  </svg>
                 </motion.span>
               </span>
             ))}
+
+            {/* PERFUMES, sitting where the logo puts it — centred under the
+                word at just under half its width. Its position and scale are
+                the lockup's own percentages, so the two lines hold the
+                printed relationship at any size rather than being spaced by
+                eye. It fades in after the last letter has landed. */}
+            <motion.span
+              aria-hidden
+              initial={reduceMotion ? false : { opacity: 0, y: "40%" }}
+              animate={{ opacity: 1, y: "0%" }}
+              transition={{ duration: 0.8, delay: 0.62, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute block text-ink"
+              style={{
+                left: `${WORDMARK_SUB.left}%`,
+                top: `${WORDMARK_SUB.top}%`,
+                width: `${WORDMARK_SUB.width}%`,
+                height: `${WORDMARK_SUB.height}%`,
+              }}
+            >
+              <svg
+                viewBox={WORDMARK_SUB.viewBox}
+                className="h-full w-full"
+                aria-hidden
+                focusable="false"
+              >
+                <path
+                  transform={WORDMARK_TRANSFORM}
+                  fillRule="evenodd"
+                  fill="currentColor"
+                  d={WORDMARK_SUB.d}
+                />
+              </svg>
+            </motion.span>
           </motion.div>
         </div>
       </motion.div>

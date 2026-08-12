@@ -21,7 +21,12 @@ export function ProductGallery({
   return (
     <div
       style={{ "--accent": accent } as CSSProperties}
-      className="flex flex-col-reverse gap-4 md:flex-row"
+      // Capped rather than left to fill its column: the source photos are 2:3,
+      // so at seven of twelve columns this panel was rendering around 800px
+      // wide and a thousand tall on a large screen — the bottle ended up bigger
+      // on the page than it is in life. The cap holds it to a plate the buying
+      // controls beside it can hold their own against.
+      className="mx-auto flex w-full flex-col-reverse gap-4 md:max-w-[400px] md:flex-row lg:max-w-[440px]"
     >
       {images.length > 1 && (
         <div className="flex gap-3 md:flex-col">
@@ -42,15 +47,22 @@ export function ProductGallery({
         </div>
       )}
 
-      <div className="relative flex-1 overflow-hidden rounded-[32px] bg-paper-2 p-3 md:p-4">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-60"
-          style={{
-            background: "radial-gradient(120% 90% at 50% 8%, var(--accent) 0%, transparent 65%)",
-          }}
-        />
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[22px]">
+      {/* The plate takes the photos' own 2:3 shape, which is the only way to
+          avoid both faults at once: crop the photo into a different ratio and
+          the bottle reads as zoomed in, letterbox it and the photo's own edges
+          show up as a rectangle inside the plate. Matching the ratio means the
+          shot fills the plate exactly — nothing cropped, no seam.
+
+          Nothing is layered over the photo for the same reason. There was an
+          accent wash and an inset vignette here to blend the old cropped shot
+          into the plate around it; with the photo running edge to edge they had
+          nothing left to blend, and on a white plate the wash was drawing a
+          grey rim around dark-accented products like Orchid. */}
+      <div
+        className="relative flex-1 overflow-hidden rounded-[32px] border-2 bg-well"
+        style={{ borderColor: `${accent}66` }}
+      >
+        <div className="relative aspect-[2/3] w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
@@ -65,15 +77,11 @@ export function ProductGallery({
                 alt={name}
                 fill
                 priority
-                sizes="(min-width: 768px) 45vw, 100vw"
+                sizes="(min-width: 768px) 420px, 100vw"
                 className="object-cover"
               />
             </motion.div>
           </AnimatePresence>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-[22px] shadow-[inset_0_0_48px_22px_var(--color-paper-2)]"
-          />
         </div>
       </div>
     </div>

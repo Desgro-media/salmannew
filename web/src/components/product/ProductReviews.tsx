@@ -24,7 +24,10 @@ export async function ProductReviews({
   ]);
 
   return (
-    <section id="reviews" className="container-grid border-t border-line py-20 md:py-28">
+    <section
+      id="reviews"
+      className="container-grid border-t border-line py-20 md:py-28"
+    >
       <Reveal>
         <p className="eyebrow text-ink-soft">Reviews</p>
         <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">
@@ -51,10 +54,13 @@ export async function ProductReviews({
               <ul className="mt-6 space-y-1.5">
                 {([5, 4, 3, 2, 1] as const).map((star) => {
                   const n = summary.distribution[star];
-                  const percent = summary.count === 0 ? 0 : (n / summary.count) * 100;
+                  const percent =
+                    summary.count === 0 ? 0 : (n / summary.count) * 100;
                   return (
                     <li key={star} className="flex items-center gap-3 text-xs">
-                      <span className="w-8 shrink-0 text-ink-soft">{star}★</span>
+                      <span className="w-8 shrink-0 text-ink-soft">
+                        {star}★
+                      </span>
                       <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-paper-3">
                         <span
                           className="block h-full rounded-full bg-gold-deep"
@@ -76,17 +82,13 @@ export async function ProductReviews({
               </p>
             </Reveal>
           )}
-
-          <div className="mt-10">
-            <ReviewForm productId={productId} />
-          </div>
         </div>
 
         <div className="lg:col-span-6 lg:col-start-7">
           {reviews.length === 0 ? (
             <p className="text-sm text-ink-soft">
-              Nothing written yet. Wear it for a week, then come back and say how
-              it held up.
+              Nothing written yet. Wear it for a week, then come back and say
+              how it held up.
             </p>
           ) : (
             <ul className="divide-y divide-line border-y border-line">
@@ -117,7 +119,9 @@ export async function ProductReviews({
                   )}
 
                   <p className="mt-4 text-xs text-ink-soft">
-                    <span className="font-semibold text-ink">{review.author.name}</span>
+                    <span className="font-semibold text-ink">
+                      {review.author.name}
+                    </span>
                     {" · "}
                     {formatReviewDate(review.createdAt)}
                   </p>
@@ -126,6 +130,14 @@ export async function ProductReviews({
             </ul>
           )}
         </div>
+      </div>
+
+      {/* Full width rather than stacked under the summary in the left column.
+          Confined to five of twelve columns the form had no room to put two
+          fields side by side, so every field became another row and the section
+          ran on for a screen and a half. */}
+      <div className="mt-12">
+        <ReviewForm productId={productId} />
       </div>
     </section>
   );

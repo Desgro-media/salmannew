@@ -6,8 +6,9 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Input";
 import { formatPrice } from "@/lib/format";
+import { PRODUCT_CATEGORIES, categoryLabel } from "@/lib/shop-filters";
 
-const CATEGORIES = ["Oriental", "Fresh", "Floral", "Woody", "Musk"] as const;
+const CATEGORIES = PRODUCT_CATEGORIES;
 const CONCENTRATIONS = ["Eau de Parfum", "Eau de Toilette", "Parfum", "Eau de Cologne"] as const;
 
 function slugify(input: string): string {
@@ -383,7 +384,7 @@ export function ProductForm({
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {categoryLabel(c)}
                     </option>
                   ))}
                 </select>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRODUCT_CATEGORIES } from "./shop-filters";
 
 export const productSizeInputSchema = z
   .object({
@@ -25,7 +26,7 @@ export const productInputSchema = z.object({
   name: z.string().trim().min(1),
   fullName: z.string().trim().min(1),
   tagline: z.string().trim().min(1),
-  category: z.enum(["Oriental", "Fresh", "Floral", "Woody", "Musk"]),
+  category: z.enum(PRODUCT_CATEGORIES),
   description: z.string().trim().min(1),
   story: z.string().trim().min(1),
   notes: z.object({

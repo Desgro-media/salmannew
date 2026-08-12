@@ -39,8 +39,12 @@ export async function PATCH(
 
       if (sizes) {
         const keepIds = sizes.filter((s) => s.id).map((s) => s.id!);
+        // Archived sizes are excluded from the sweep. They are deliberately
+        // absent from the form the admin submitted, so they would otherwise
+        // look like removals — and the delete would fail anyway the moment one
+        // of them had an order against it.
         await tx.productSize.deleteMany({
-          where: { productId: id, id: { notIn: keepIds } },
+          where: { productId: id, id: { notIn: keepIds }, isArchived: false },
         });
 
         for (const size of sizes) {

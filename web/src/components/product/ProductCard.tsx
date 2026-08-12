@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { cutoutSrc } from "@/lib/product-image";
+import { wellSurface } from "@/lib/product-well";
+import { categoryLabel } from "@/lib/shop-filters";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { useHasMounted } from "@/lib/use-has-mounted";
@@ -19,7 +21,11 @@ export function ProductCard({ product }: { product: Product }) {
   const mounted = useHasMounted();
   const liked = mounted && wishlistSlugs.includes(product.slug);
   const size = product.sizes[0];
-  const label = product.bestseller ? "Popular" : product.isNew ? "New" : product.category;
+  const label = product.bestseller
+    ? "Popular"
+    : product.isNew
+      ? "New"
+      : categoryLabel(product.category);
 
   function handleAdd() {
     addItem({
@@ -48,21 +54,29 @@ export function ProductCard({ product }: { product: Product }) {
           than a cropped circle. Keeping the three surfaces identical is the
           point — the shop should not read as a different product system. */}
       <div
-        className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2 transition-shadow duration-500 ease-out group-hover:shadow-[0_24px_44px_-20px_rgba(19,17,16,0.25)]"
+        className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-well transition-shadow duration-500 ease-out group-hover:shadow-[0_24px_44px_-20px_rgba(19,17,16,0.25)]"
         style={{ borderColor: `${product.accent}66` }}
       >
-        <Image
-          src={cutoutSrc(product.images[0])}
-          alt={product.fullName}
-          fill
-          draggable={false}
-          sizes="(min-width: 1024px) 30vw, 46vw"
-          className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-        />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_0_40px_20px_var(--color-paper-2)]"
+          className="pointer-events-none absolute inset-0"
+          style={{ background: wellSurface(product.accent) }}
         />
+
+        {/* The bottle is inset rather than filling the well, so the well reads
+            as a surface the product is placed on. Inset on its own box instead
+            of padding on the well, because the chips below are positioned
+            against the well's edges and padding would drag them inward too. */}
+        <div className="absolute inset-[13%]">
+          <Image
+            src={cutoutSrc(product.images[0])}
+            alt={product.fullName}
+            fill
+            draggable={false}
+            sizes="(min-width: 1024px) 20vw, 46vw"
+            className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+        </div>
 
         {/* Both chips used backdrop-blur-sm. A product card repeats across the
             whole shop grid, so that was two blurred backdrops per card

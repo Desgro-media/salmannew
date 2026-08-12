@@ -6,6 +6,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
 import { cutoutSrc } from "@/lib/product-image";
+import { wellSurface } from "@/lib/product-well";
 
 export async function SignatureCollections() {
   const products = await getAllProducts();
@@ -32,7 +33,7 @@ export async function SignatureCollections() {
                 <div className="flex h-full flex-col">
                   <Link href={`/product/${product.slug}`} className="group block">
                     <div
-                      className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-paper-2"
+                      className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-well"
                       style={{ borderColor: `${product.accent}66` }}
                     >
                       {onSale && (
@@ -40,18 +41,21 @@ export async function SignatureCollections() {
                           Sale
                         </span>
                       )}
-                      <Image
-                        src={cutoutSrc(product.images[0])}
-                        alt={product.fullName}
-                        fill
-                        draggable={false}
-                        sizes="(min-width: 640px) 256px, 42vw"
-                        className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                      />
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_0_40px_20px_var(--color-paper-2)]"
+                        className="pointer-events-none absolute inset-0"
+                        style={{ background: wellSurface(product.accent) }}
                       />
+                      <div className="absolute inset-[13%]">
+                        <Image
+                          src={cutoutSrc(product.images[0])}
+                          alt={product.fullName}
+                          fill
+                          draggable={false}
+                          sizes="(min-width: 640px) 256px, 42vw"
+                          className="pointer-events-none object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                        />
+                      </div>
                     </div>
                     <h3 className="mt-4 font-bold">{product.name}</h3>
                     <p className="mt-1 text-sm">
