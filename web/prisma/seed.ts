@@ -41,6 +41,7 @@ async function seedProducts() {
         accent: product.accent,
         images: product.images,
         bestseller: product.bestseller ?? false,
+        signature: product.signature ?? false,
         isNew: product.isNew ?? false,
       },
       create: {
@@ -58,6 +59,7 @@ async function seedProducts() {
         accent: product.accent,
         images: product.images,
         bestseller: product.bestseller ?? false,
+        signature: product.signature ?? false,
         isNew: product.isNew ?? false,
       },
     });

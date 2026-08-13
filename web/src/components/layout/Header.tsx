@@ -18,8 +18,10 @@ import {
 
 const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
-  { href: "/shop?filter=Best+Sellers", label: "Best Sellers" },
-  { href: "/shop?filter=Signature+Collection", label: "Signature Collections" },
+  // Both open the shop with the type filter already applied — see the ?type=
+  // values in lib/shop-filters.
+  { href: "/shop?type=BestSellers", label: "Best Sellers" },
+  { href: "/shop?type=Signature", label: "Signature Collections" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
@@ -69,15 +71,23 @@ export function Header() {
         <Link
           href="/"
           onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-2.5 shrink-0"
+          className="relative inline-flex shrink-0 items-center"
           aria-label="Salman Perfumes — home"
         >
-          <span className="relative inline-block aspect-[1406/2628] h-7 shrink-0 md:h-8">
+          {/* Behind the letters rather than beside them, the way the hero sets
+              the two. The flame is narrow enough at this height that it reads
+              through the middle of SALMAN and clears the S and the N's swash;
+              held under full strength so the letterforms stay the black shape
+              the eye lands on first. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/2 aspect-[1406/2628] h-[190%] -translate-x-1/2 -translate-y-1/2 opacity-55"
+          >
             <Image
               src="/logo/mark-gold-transparent.png"
               alt=""
               fill
-              sizes="24px"
+              sizes="32px"
               className="object-contain"
               priority
             />
@@ -86,7 +96,7 @@ export function Header() {
               UI sans. One path for both lines, because nothing here animates
               per letter — the hero is the only place that needs them apart. */}
           <span
-            className="block h-6 shrink-0 text-ink md:h-7"
+            className="relative block h-6 shrink-0 text-ink md:h-7"
             style={{ aspectRatio: LOCKUP_ASPECT }}
           >
             <svg
@@ -108,7 +118,9 @@ export function Header() {
         <nav className="hidden md:flex items-center gap-10 eyebrow">
           {NAV_LINKS.map((link) => (
             <Link
-              key={link.href}
+              // Keyed by label, not href: more than one entry points at the
+              // shop's All chip.
+              key={link.label}
               href={link.href}
               className="relative py-1 hover:text-gold-ink transition-colors after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-0 after:bg-ink after:transition-all hover:after:w-full"
             >
@@ -205,7 +217,7 @@ export function Header() {
           >
             <ul className="container-grid flex flex-col py-4">
               {NAV_LINKS.map((link) => (
-                <li key={link.href} className="border-b border-line/70 last:border-0">
+                <li key={link.label} className="border-b border-line/70 last:border-0">
                   <Link
                     href={link.href}
                     onClick={() => setMobileOpen(false)}

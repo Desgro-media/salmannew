@@ -20,6 +20,14 @@ export async function BestSellers() {
         <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
           Best Sellers
         </h2>
+        {/* Opens the shop already filtered to these, so the row and the page it
+            leads to agree on what a best seller is. */}
+        <Link
+          href="/shop?type=BestSellers"
+          className="mt-4 inline-block text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
+        >
+          View all →
+        </Link>
       </Reveal>
 
       <div className="mt-10 sm:mt-14">

@@ -228,7 +228,7 @@ export function ReviewForm({ productId }: { productId: string }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-[22px] border border-line bg-paper-2 p-6 sm:p-8"
+      className="@container rounded-[22px] border border-line bg-paper-2 p-6 sm:p-8"
     >
       <p className="eyebrow text-ink-soft">
         {own ? "Your review" : "Write a review"}
@@ -244,10 +244,12 @@ export function ReviewForm({ productId }: { productId: string }) {
       {/* Two rows of two rather than one column of four. Rating pairs with the
           headline because both are a single line tall, and the photo tray sits
           beside the textarea because it is the only other field that needs
-          height. Collapses back to a stack below sm, where side-by-side would
-          leave each field too narrow to use. */}
-      <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-12">
-        <fieldset className="sm:col-span-4">
+          height. Collapses back to a stack in a narrow container, where
+          side-by-side would leave each field too narrow to use — measured
+          against the form's own width, not the viewport's, because the form now
+          sits in a column roughly half the page wide. */}
+      <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-5 @2xl:grid-cols-12">
+        <fieldset className="@2xl:col-span-4">
           <legend className="text-xs font-medium text-ink-soft">Rating</legend>
           <div
             className="mt-2 flex items-center gap-1"
@@ -280,7 +282,7 @@ export function ReviewForm({ productId }: { productId: string }) {
           </div>
         </fieldset>
 
-        <label className="block sm:col-span-8">
+        <label className="block @2xl:col-span-8">
           <span className="text-xs font-medium text-ink-soft">
             Headline (optional)
           </span>
@@ -294,7 +296,7 @@ export function ReviewForm({ productId }: { productId: string }) {
           />
         </label>
 
-        <label className="block sm:col-span-8">
+        <label className="block @2xl:col-span-8">
           <span className="text-xs font-medium text-ink-soft">Your review</span>
           <textarea
             required
@@ -311,7 +313,7 @@ export function ReviewForm({ productId }: { productId: string }) {
           </span>
         </label>
 
-        <div className="sm:col-span-4">
+        <div className="@2xl:col-span-4">
           <span className="text-xs font-medium text-ink-soft">
             Photos (optional, up to {MAX_REVIEW_PHOTOS})
           </span>

@@ -27,6 +27,7 @@ export const products: Product[] = [
       base: ["Oud", "Vanilla", "White Musk"],
     },
     images: [img("imperial", 1), img("imperial", 2)],
+    signature: true,
     bestseller: true,
     sizes: [
       {
@@ -68,6 +69,7 @@ export const products: Product[] = [
       base: ["Patchouli", "Sandalwood", "Musk"],
     },
     images: [img("orchid", 1), img("orchid", 2)],
+    signature: true,
     bestseller: true,
     sizes: [
       {
@@ -109,6 +111,8 @@ export const products: Product[] = [
       base: ["Vetiver", "Oakmoss", "Musk"],
     },
     images: [img("akhdar", 1), img("akhdar", 2)],
+    signature: true,
+    bestseller: true,
     sizes: [
       {
         id: "akhdar-20",
@@ -149,6 +153,7 @@ export const products: Product[] = [
       base: ["Amber", "Sandalwood", "Musk"],
     },
     images: [img("oud-lavender", 1), img("oud-lavender", 2)],
+    signature: true,
     bestseller: true,
     sizes: [
       {
@@ -190,6 +195,7 @@ export const products: Product[] = [
       base: ["Cedarwood", "Ambroxan", "Clean Musk"],
     },
     images: [img("lather", 1)],
+    signature: true,
     isNew: true,
     sizes: [
       {
@@ -222,6 +228,7 @@ export const products: Product[] = [
       base: ["Sandalwood", "Amber Musk", "Benzoin"],
     },
     images: [img("latheer", 1)],
+    signature: true,
     isNew: true,
     sizes: [
       {
@@ -266,6 +273,7 @@ export const products: Product[] = [
     },
     images: [img("prive-black", 1)],
     isNew: true,
+    bestseller: true,
     sizes: [
       {
         id: "prive-black-50",
@@ -394,6 +402,7 @@ export const products: Product[] = [
     },
     images: [img("prive-oud", 1)],
     isNew: true,
+    bestseller: true,
     sizes: [
       {
         id: "prive-oud-50",

@@ -48,6 +48,10 @@ model Product {
   accent        String
   images        String[]
   bestseller    Boolean       @default(false)
+  // Drives the shop's "Signature Collection" type filter. Stored rather than
+  // derived from the category so the shop owner picks what's in it — it used to
+  // mean "anything that isn't Privé", which no one could change.
+  signature     Boolean       @default(false)
   isNew         Boolean       @default(false)
   isArchived    Boolean       @default(false)
   sizes         ProductSize[]

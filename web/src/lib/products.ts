@@ -40,6 +40,7 @@ function toProduct(row: ProductRow): Product {
       thumb: size.thumb,
     })),
     bestseller: row.bestseller,
+    signature: row.signature,
     isNew: row.isNew,
   };
 }
