@@ -37,6 +37,7 @@ export interface Product {
   images: string[];
   sizes: ProductSize[];
   bestseller?: boolean;
+  signature?: boolean;
   isNew?: boolean;
 }
 

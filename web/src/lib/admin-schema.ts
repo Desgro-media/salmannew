@@ -38,6 +38,7 @@ export const productInputSchema = z.object({
   accent: z.string().trim().min(1),
   images: z.array(z.string().trim().min(1)).min(1),
   bestseller: z.boolean().optional(),
+  signature: z.boolean().optional(),
   isNew: z.boolean().optional(),
   sizes: z.array(productSizeInputSchema).min(1),
 });

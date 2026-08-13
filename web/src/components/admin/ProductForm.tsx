@@ -106,6 +106,7 @@ interface ProductFormValues {
   accent: string;
   images: string[];
   bestseller: boolean;
+  signature: boolean;
   isNew: boolean;
   sizes: SizeForm[];
 }
@@ -134,6 +135,7 @@ const emptyValues: ProductFormValues = {
   accent: "#131110",
   images: [],
   bestseller: false,
+  signature: false,
   isNew: false,
   sizes: [emptySize],
 };
@@ -153,6 +155,7 @@ export interface ProductFormInitial {
   accent: string;
   images: string[];
   bestseller: boolean;
+  signature: boolean;
   isNew: boolean;
   sizes: {
     id: string;
@@ -182,6 +185,7 @@ function fromInitial(initial: ProductFormInitial): ProductFormValues {
     accent: initial.accent,
     images: initial.images,
     bestseller: initial.bestseller,
+    signature: initial.signature,
     isNew: initial.isNew,
     sizes: initial.sizes.map((s) => ({
       id: s.id,
@@ -316,6 +320,7 @@ export function ProductForm({
       accent: values.accent,
       images: values.images,
       bestseller: values.bestseller,
+      signature: values.signature,
       isNew: values.isNew,
       sizes: values.sizes.map((s) => ({
         id: s.id,
@@ -417,7 +422,10 @@ export function ProductForm({
                 </div>
               </Field>
             </div>
-            <div className="flex gap-6 border-t border-line pt-5 text-sm">
+            {/* These three decide where a scent shows up outside its own page:
+                Bestseller drives the homepage row and the shop's Best Sellers
+                filter, Signature the shop's Signature Collection filter. */}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-line pt-5 text-sm">
               <label className="flex min-h-11 cursor-pointer items-center gap-2.5 md:min-h-0">
                 <input
                   type="checkbox"
@@ -426,6 +434,15 @@ export function ProductForm({
                   onChange={(e) => update("bestseller", e.target.checked)}
                 />
                 Bestseller
+              </label>
+              <label className="flex min-h-11 cursor-pointer items-center gap-2.5 md:min-h-0">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 shrink-0 accent-[var(--color-ink)]"
+                  checked={values.signature}
+                  onChange={(e) => update("signature", e.target.checked)}
+                />
+                Signature Collection
               </label>
               <label className="flex min-h-11 cursor-pointer items-center gap-2.5 md:min-h-0">
                 <input

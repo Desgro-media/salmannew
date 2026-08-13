@@ -49,8 +49,14 @@ export default async function ProductPage({
       </div>
 
       <ProductSelectionProvider>
+        {/* Two rows on the left, one tall column on the right. The gallery is
+            capped at ~440px but the buying column runs on past it, so left of
+            the accordions there used to be a screen of empty paper; the reviews
+            now fill it. Rows are placed explicitly rather than left to
+            auto-flow so the source order — gallery, then everything you need to
+            buy, then reviews — is what a single-column phone gets. */}
         <div className="container-grid grid grid-cols-1 gap-12 pb-24 md:grid-cols-12 md:gap-8 md:pb-32">
-          <div className="md:col-span-7">
+          <div className="md:col-span-7 md:col-start-1 md:row-start-1">
             <ProductGallery
               images={product.images}
               name={product.fullName}
@@ -58,7 +64,7 @@ export default async function ProductPage({
             />
           </div>
 
-          <div className="md:col-span-4 md:col-start-9">
+          <div className="md:col-span-4 md:col-start-9 md:row-span-2 md:row-start-1">
             <span className="inline-block rounded-full bg-paper-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
               {categoryLabel(product.category)}
             </span>
@@ -95,10 +101,12 @@ export default async function ProductPage({
               </AccordionItem>
             </div>
           </div>
+
+          <div className="md:col-span-7 md:col-start-1 md:row-start-2">
+            <ProductReviews productId={product.id} productName={product.name} />
+          </div>
         </div>
       </ProductSelectionProvider>
-
-      <ProductReviews productId={product.id} productName={product.name} />
 
       {related.length > 0 && (
         <section className="container-grid border-t border-line py-20 md:py-28">

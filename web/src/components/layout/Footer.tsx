@@ -10,13 +10,17 @@ export async function Footer() {
     <footer className="border-t border-line bg-ink text-paper">
       <div className="container-grid grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-12 md:py-24">
         <div className="col-span-2 md:col-span-4">
-          <span className="relative inline-block aspect-[1406/2628] h-10">
+          {/* The full lockup — flame over SALMAN PERFUMES — rather than the
+              flame alone. Tall enough that the wordmark under the mark is
+              actually readable; below about this height it degrades into a gold
+              smudge, which is why the header uses the vector lockup instead. */}
+          <span className="relative inline-block aspect-[2129/3250] h-36">
             <Image
-              src="/logo/mark-gold-transparent.png"
+              src="/logo/logo-gold-transparent.png"
               alt="Salman Perfumes"
               fill
-              sizes="30px"
-              className="object-contain"
+              sizes="95px"
+              className="object-contain object-left"
             />
           </span>
           <p className="mt-6 max-w-xs text-sm leading-relaxed text-paper/70">

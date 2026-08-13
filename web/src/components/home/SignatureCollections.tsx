@@ -19,6 +19,14 @@ export async function SignatureCollections() {
           <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
             Signature Collections
           </h2>
+          {/* Opens the shop already filtered to the signature scents, matching
+              the header's link of the same name. */}
+          <Link
+            href="/shop?type=Signature"
+            className="mt-4 inline-block text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
+          >
+            View all →
+          </Link>
         </Reveal>
       </div>
 
