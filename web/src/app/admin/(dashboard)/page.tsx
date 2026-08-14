@@ -16,7 +16,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminProductsPage() {
   const [rows, stats] = await Promise.all([
     prisma.product.findMany({
-      include: { sizes: { orderBy: { volumeMl: "asc" } } },
+      // Archived sizes are excluded so the price range shown here (and the
+      // Edit form it links to) reflects only what's actually for sale — an
+      // archived 30 ml at an old price would otherwise widen the range with
+      // a price nobody can buy anymore.
+      include: { sizes: { where: { isArchived: false }, orderBy: { volumeMl: "asc" } } },
       orderBy: { createdAt: "desc" },
     }),
     getPurchaseStatsByProduct(),

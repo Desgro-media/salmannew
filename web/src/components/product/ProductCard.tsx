@@ -73,7 +73,7 @@ export function ProductCard({ product }: { product: Product }) {
             against the well's edges and padding would drag them inward too. */}
         <div className="absolute inset-[13%]">
           <Image
-            src={cutoutSrc(product.images[0])}
+            src={cutoutSrc(size.image)}
             alt={product.fullName}
             fill
             draggable={false}
