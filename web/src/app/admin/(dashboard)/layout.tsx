@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/products/new", label: "New Product" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/delivery-boys", label: "Delivery Boys" },
 ];
 
 export default function AdminDashboardLayout({
@@ -16,11 +17,11 @@ export default function AdminDashboardLayout({
   return (
     <div className="min-h-screen pt-16 md:pt-20">
       <div className="border-b border-line bg-paper">
-        {/* Four links and a logout do not fit one phone-width row — that forced
+        {/* Five links and a logout do not fit one phone-width row — that forced
             the whole admin area to ~576px and left every page pannable
             sideways. The bar wraps instead: brand and logout hold the top row,
             the links drop to their own scrollable strip beneath. A strip rather
-            than a hamburger, because four destinations do not justify hiding
+            than a hamburger, because five destinations do not justify hiding
             them behind a tap. */}
         {/* Phones: a 1fr-auto-1fr grid, so the brand is optically centred on the
             top row no matter how wide the logout button is — centring it with
@@ -41,7 +42,7 @@ export default function AdminDashboardLayout({
           </div>
 
           <nav className="col-span-3 row-start-2 w-full md:row-start-auto md:w-auto md:flex-1">
-            {/* Wraps rather than scrolls sideways: four short links fit two
+            {/* Wraps rather than scrolls sideways: short links fit a couple of
                 rows, and every destination stays visible. A scroll strip would
                 clip the last one behind an edge nobody thinks to swipe. */}
             <ul className="flex flex-wrap items-center gap-x-1 gap-y-0 md:flex-nowrap md:gap-6">

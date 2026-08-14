@@ -3,7 +3,7 @@ import { OrdersOverview } from "@/components/orders/OrdersOverview";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage() {
+export default async function DeliveryOrdersPage() {
   const [orders, counts] = await Promise.all([
     prisma.order.findMany({
       orderBy: { createdAt: "desc" },
@@ -19,13 +19,13 @@ export default async function AdminOrdersPage() {
       <div>
         <h1 className="text-3xl font-black tracking-tight">Orders</h1>
         <p className="mt-1 text-sm text-ink-soft">
-          Open an order to move it through packing, shipping and delivery. Each
-          change is stamped and shown on the customer&rsquo;s tracking page.
+          Open an order to see the delivery address and update its status as
+          you move it along.
         </p>
       </div>
 
       <div className="mt-8">
-        <OrdersOverview orders={orders} counts={counts} basePath="/admin/orders" />
+        <OrdersOverview orders={orders} counts={counts} basePath="/delivery/orders" />
       </div>
     </div>
   );

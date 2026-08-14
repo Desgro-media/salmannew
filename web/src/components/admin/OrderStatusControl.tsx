@@ -14,10 +14,13 @@ export function OrderStatusControl({
   orderId,
   currentStatus,
   orderNumber,
+  endpoint,
 }: {
   orderId: string;
   currentStatus: OrderStatusType;
   orderNumber: string;
+  /** Defaults to the admin status API; delivery passes its own. */
+  endpoint?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -35,7 +38,7 @@ export function OrderStatusControl({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
+      const res = await fetch(endpoint ?? `/api/admin/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, note: note.trim() || undefined }),

@@ -23,7 +23,7 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 export interface AdminSession {
   sub: string; // Admin.id
   email: string;
-  role: "ADMIN" | "SUPERADMIN";
+  role: "ADMIN" | "SUPERADMIN" | "DELIVERY";
 }
 
 export async function createSessionToken(session: AdminSession): Promise<string> {
@@ -41,7 +41,7 @@ export async function verifySessionToken(token: string): Promise<AdminSession | 
     if (
       typeof payload.sub !== "string" ||
       typeof payload.email !== "string" ||
-      (payload.role !== "ADMIN" && payload.role !== "SUPERADMIN")
+      (payload.role !== "ADMIN" && payload.role !== "SUPERADMIN" && payload.role !== "DELIVERY")
     ) {
       return null;
     }

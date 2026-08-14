@@ -10,7 +10,11 @@ export default async function EditProductPage({
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { sizes: { orderBy: { volumeMl: "asc" } } },
+    // Archived sizes are deliberately excluded here — the PATCH route treats
+    // their absence from the submitted form as intentional (see its comment),
+    // and showing them as ordinary editable "Size" cards misleads the admin
+    // into thinking a retired SKU/price is still live.
+    include: { sizes: { where: { isArchived: false }, orderBy: { volumeMl: "asc" } } },
   });
 
   if (!product) notFound();

@@ -25,11 +25,12 @@ export async function POST(request: Request) {
   const { email, password } = parsed.data;
   const admin = await prisma.admin.findUnique({ where: { email } });
 
-  // Delivery accounts sign in through /delivery/login instead — kept
-  // separate from this portal even though both share the Admin table.
+  // This portal is delivery-only — an ADMIN/SUPERADMIN account authenticating
+  // here would otherwise get a valid DELIVERY-shaped session for the wrong
+  // person, since role isn't part of the login credentials themselves.
   if (
     !admin ||
-    admin.role === "DELIVERY" ||
+    admin.role !== "DELIVERY" ||
     !(await verifyPassword(password, admin.passwordHash))
   ) {
     return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       role: admin.role,
     });
   } catch (err) {
-    console.error("Failed to create admin session token:", err);
+    console.error("Failed to create delivery session token:", err);
     return NextResponse.json(
       { error: "Server misconfiguration — session signing failed." },
       { status: 500 },

@@ -9,6 +9,7 @@ datasource db {
 enum AdminRole {
   ADMIN
   SUPERADMIN
+  DELIVERY
 }
 
 // Prive is the second product line rather than a scent family. Spelled without
@@ -28,6 +29,9 @@ model Admin {
   email         String             @unique
   passwordHash  String
   role          AdminRole          @default(ADMIN)
+  // Display name for delivery boys (and, optionally, other staff) in admin UI.
+  // Unset for the seeded superadmin, so it stays nullable.
+  name          String?
   createdAt     DateTime           @default(now())
   statusChanges OrderStatusEvent[]
 }
