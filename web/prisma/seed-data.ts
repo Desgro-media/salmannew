@@ -244,6 +244,211 @@ export const products: Product[] = [
   },
 
   // ---------------------------------------------------------------------
+  // The August 2026 additions to the "me." line — Love, Blue, Oud, Sweet and
+  // Kiano. Same line and same pricing as the six above (20 ml ₹499, 50 ml ₹999);
+  // which sizes exist is read off the shoot, where the slim tube is the 20 ml
+  // and the squat bottle is the 50 ml. Sweet and Kiano were only photographed
+  // as the 50 ml, so that is all they carry until a 20 ml shot arrives.
+  //
+  // As with Privé below, the taglines, descriptions, stories and notes are
+  // WRITTEN TO FIT THE NAME AND COLOUR rather than supplied by the client, and
+  // should not be taken as accurate until the real fragrance briefs land. The
+  // names, sizes and accents are the only part read off the bottles.
+  // ---------------------------------------------------------------------
+  {
+    id: "prod_love",
+    slug: "love",
+    name: "Love",
+    fullName: "me. Love",
+    tagline: "Rose and skin, kept deliberately close.",
+    category: "Floral",
+    concentration: "Eau de Parfum",
+    accent: "#A31A28",
+    description:
+      "Love leads with pink pepper and raspberry over a damask rose heart, settling into vanilla, benzoin and white musk. Sweet without ever turning sugary — a red scent that stays within arm's length.",
+    story:
+      "Red is the easiest colour to overdo, so Love was built to pull back. The rose is real and the vanilla under it is thin on purpose: it's meant to be noticed by one person, not by a room.",
+    notes: {
+      top: ["Pink Pepper", "Raspberry", "Bergamot"],
+      heart: ["Damask Rose", "Peony", "Jasmine"],
+      base: ["Vanilla", "Benzoin", "White Musk"],
+    },
+    images: [img("love", 1), img("love", 2)],
+    signature: true,
+    isNew: true,
+    sizes: [
+      {
+        id: "love-20",
+        label: "20 ml",
+        volumeMl: 20,
+        sku: "SP-LOV-020",
+        price: 499,
+        image: img("love", 1),
+        thumb: thumb("love", 1),
+      },
+      {
+        id: "love-50",
+        label: "50 ml",
+        volumeMl: 50,
+        sku: "SP-LOV-050",
+        price: 999,
+        image: img("love", 2),
+        thumb: thumb("love", 2),
+      },
+    ],
+  },
+  {
+    id: "prod_blue",
+    slug: "blue",
+    name: "Blue",
+    fullName: "me. Blue",
+    tagline: "Open water, cold and clean.",
+    category: "Fresh",
+    concentration: "Eau de Parfum",
+    accent: "#1E2F73",
+    description:
+      "Blue opens on bergamot, sea salt and grapefruit, moves through lavender and violet leaf, and dries down on ambroxan, cedarwood and musk. Bright, saline and unfussy — the easiest thing in the line to wear.",
+    story:
+      "Blue is the house's answer to everyone who asks for 'something for every day'. Ambroxan does the lasting, the salt keeps it from reading generic, and nothing in it asks for a second thought.",
+    notes: {
+      top: ["Bergamot", "Sea Salt", "Grapefruit"],
+      heart: ["Lavender", "Violet Leaf", "Juniper"],
+      base: ["Ambroxan", "Cedarwood", "Musk"],
+    },
+    images: [img("blue", 1), img("blue", 2)],
+    signature: true,
+    isNew: true,
+    sizes: [
+      {
+        id: "blue-20",
+        label: "20 ml",
+        volumeMl: 20,
+        sku: "SP-BLU-020",
+        price: 499,
+        image: img("blue", 1),
+        thumb: thumb("blue", 1),
+      },
+      {
+        id: "blue-50",
+        label: "50 ml",
+        volumeMl: 50,
+        sku: "SP-BLU-050",
+        price: 999,
+        image: img("blue", 2),
+        thumb: thumb("blue", 2),
+      },
+    ],
+  },
+  {
+    id: "prod_oud",
+    slug: "oud",
+    name: "Oud",
+    fullName: "me. Oud",
+    tagline: "The wood, without the ceremony.",
+    category: "Woody",
+    concentration: "Eau de Parfum",
+    accent: "#5C3320",
+    description:
+      "Oud keeps the name plain because the scent is — cardamom and saffron over oud, cedar and guaiac wood, closed with sandalwood, amber and vanilla. Dense and resinous, but sanded down enough to wear in daylight.",
+    story:
+      "Every house eventually makes an oud. This one was built to be the first oud someone owns rather than their fifth: the smoke is all there, the medicinal edge isn't, and the vanilla underneath is what makes it easy.",
+    notes: {
+      top: ["Cardamom", "Saffron", "Lemon"],
+      heart: ["Oud", "Cedarwood", "Guaiac Wood"],
+      base: ["Sandalwood", "Amber", "Vanilla"],
+    },
+    images: [img("oud", 1), img("oud", 2)],
+    signature: true,
+    isNew: true,
+    sizes: [
+      {
+        id: "oud-20",
+        label: "20 ml",
+        volumeMl: 20,
+        sku: "SP-OUD-020",
+        price: 499,
+        image: img("oud", 1),
+        thumb: thumb("oud", 1),
+      },
+      {
+        id: "oud-50",
+        label: "50 ml",
+        volumeMl: 50,
+        sku: "SP-OUD-050",
+        price: 999,
+        image: img("oud", 2),
+        thumb: thumb("oud", 2),
+      },
+    ],
+  },
+  {
+    id: "prod_sweet",
+    slug: "sweet",
+    name: "Sweet",
+    fullName: "me. Sweet",
+    tagline: "Caramel and orange peel, worn warm.",
+    category: "Oriental",
+    concentration: "Eau de Parfum",
+    accent: "#E4661B",
+    description:
+      "Sweet is the gourmand of the line — blood orange and cinnamon over caramel and tonka bean, resting on vanilla, benzoin and amber. Rich, edible, and a good deal warmer than the bottle lets on.",
+    story:
+      "Sweet exists because the house kept being asked for something dessert-shaped that wasn't cloying. The orange peel at the top is what keeps the caramel honest — without it the whole thing collapses into sugar.",
+    notes: {
+      top: ["Blood Orange", "Cinnamon", "Pink Pepper"],
+      heart: ["Caramel", "Tonka Bean", "Heliotrope"],
+      base: ["Vanilla", "Benzoin", "Amber"],
+    },
+    images: [img("sweet", 1)],
+    signature: true,
+    isNew: true,
+    sizes: [
+      {
+        id: "sweet-50",
+        label: "50 ml",
+        volumeMl: 50,
+        sku: "SP-SWT-050",
+        price: 999,
+        image: img("sweet", 1),
+        thumb: thumb("sweet", 1),
+      },
+    ],
+  },
+  {
+    id: "prod_kiano",
+    slug: "kiano",
+    name: "Kiano",
+    fullName: "me. Kiano",
+    tagline: "Green citrus over cool stone.",
+    category: "Fresh",
+    concentration: "Eau de Parfum",
+    accent: "#178FA8",
+    description:
+      "Kiano sits between fresh and woody — lime, mint and bergamot over green tea and violet leaf, grounded by vetiver, cedarwood and ambrette. Cool, dry and faintly mineral.",
+    story:
+      "Kiano was the last name to settle and the first scent to finish. It's the driest thing in the line, built on tea and vetiver rather than fruit, so it reads cool where the rest of the fresh side reads sharp.",
+    notes: {
+      top: ["Lime", "Mint", "Bergamot"],
+      heart: ["Green Tea", "Violet Leaf", "Cardamom"],
+      base: ["Vetiver", "Cedarwood", "Ambrette"],
+    },
+    images: [img("kiano", 1)],
+    signature: true,
+    isNew: true,
+    sizes: [
+      {
+        id: "kiano-50",
+        label: "50 ml",
+        volumeMl: 50,
+        sku: "SP-KIA-050",
+        price: 999,
+        image: img("kiano", 1),
+        thumb: thumb("kiano", 1),
+      },
+    ],
+  },
+
+  // ---------------------------------------------------------------------
   // Privé — the second line, branded "by Salman Perfumes France" rather than
   // "me.", so it carries its own category and its own filter on the shop.
   //
