@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { productUpdateSchema } from "@/lib/admin-schema";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function PATCH(
   request: Request,
@@ -81,11 +81,7 @@ export async function PATCH(
       });
     });
 
-    revalidatePath("/shop");
-    revalidatePath(`/product/${updated.slug}`);
-    if (existing.slug !== updated.slug) {
-      revalidatePath(`/product/${existing.slug}`);
-    }
+    revalidateStorefront();
 
     return NextResponse.json(updated);
   } catch (err) {
@@ -119,13 +115,11 @@ export async function DELETE(
       where: { id },
       data: { isArchived: true },
     });
-    revalidatePath("/shop");
-    revalidatePath(`/product/${archived.slug}`);
+    revalidateStorefront();
     return NextResponse.json({ archived: true, product: archived });
   }
 
   await prisma.product.delete({ where: { id } });
-  revalidatePath("/shop");
-  revalidatePath(`/product/${product.slug}`);
+  revalidateStorefront();
   return NextResponse.json({ deleted: true });
 }

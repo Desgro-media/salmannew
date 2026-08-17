@@ -24,6 +24,22 @@ enum Category {
   Musk
 }
 
+// Storefront values the shop owner changes without a deploy. One row, always
+// id 1 — a CHECK constraint in the migration enforces that rather than trusting
+// every caller to remember, because a second row would silently become a second
+// set of prices and which one won would depend on query order.
+//
+// Money is in whole rupees, like every other price in this schema.
+model StoreSettings {
+  id                    Int      @id @default(1)
+  shippingFee           Int      @default(50)
+  // Order subtotal at or above which shipping is waived. Read by checkout and
+  // by the marquee/product-page copy alike, so the advertised figure and the
+  // charged one cannot drift apart.
+  freeShippingThreshold Int      @default(2999)
+  updatedAt             DateTime @updatedAt
+}
+
 model Admin {
   id            String             @id @default(cuid())
   email         String             @unique
@@ -140,13 +156,35 @@ enum OrderStatus {
   CANCELLED
 }
 
+// Deliberately separate from OrderStatus: money and parcels move independently.
+// An order can be PAID and still sit at RECEIVED, and a REFUNDED one keeps
+// whatever fulfilment state it had reached when the refund was issued.
+//
+// PENDING is the state every order is born in — the row exists so the Razorpay
+// order has something to point back at, but nobody has paid yet. Those rows are
+// abandoned carts, not orders, and are kept out of the fulfilment queue.
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 model Order {
   id                String             @id @default(cuid())
   orderNumber       String             @unique
   status            OrderStatus        @default(RECEIVED)
+  paymentStatus     PaymentStatus      @default(PENDING)
   subtotal          Int
   shipping          Int                @default(0)
   total             Int
+  // Razorpay's own order id (`order_...`), created before the customer is sent
+  // to the gateway. Unique because it is what the webhook matches on, and two
+  // of our orders must never claim the same payment. Null only for the orders
+  // placed before payments existed.
+  razorpayOrderId   String?            @unique
+  razorpayPaymentId String?
+  paidAt            DateTime?
   customerId        String?
   customer          Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerFullName  String
@@ -164,6 +202,7 @@ model Order {
   @@index([customerEmail])
   @@index([customerId])
   @@index([status])
+  @@index([paymentStatus])
 }
 
 // One row per checkpoint the order has actually reached. Order.status is the

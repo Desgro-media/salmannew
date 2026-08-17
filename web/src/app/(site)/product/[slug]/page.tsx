@@ -10,6 +10,8 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { Reveal } from "@/components/motion/Reveal";
 import { categoryLabel } from "@/lib/shop-filters";
+import { formatPrice } from "@/lib/format";
+import { getStoreSettings } from "@/lib/store-settings";
 
 // Products are admin-managed in the DB now, so params can't be enumerated
 // statically at build time. ISR keeps pages fast while picking up admin
@@ -38,6 +40,8 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
+
+  const settings = await getStoreSettings();
 
   const related = await getRelatedProducts(slug, 3);
 
@@ -90,9 +94,11 @@ export default async function ProductPage({
                 {product.story}
               </AccordionItem>
               <AccordionItem title="Shipping & Returns">
-                Dispatched in 2–4 business days. Free shipping on orders over
-                ₹2,999. Unopened bottles can be returned within 14 days of
-                delivery.
+                Dispatched in 2–4 business days.{" "}
+                {settings.shippingFee === 0
+                  ? "Shipping is free on every order."
+                  : `Free shipping on orders over ${formatPrice(settings.freeShippingThreshold)}; ${formatPrice(settings.shippingFee)} below that.`}{" "}
+                Unopened bottles can be returned within 14 days of delivery.
               </AccordionItem>
               <AccordionItem title="How to Apply">
                 Spray on pulse points — wrists, neck, behind the ears. Eau de

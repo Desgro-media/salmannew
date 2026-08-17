@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status";
 import { OrderStatusControl } from "@/components/admin/OrderStatusControl";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 
@@ -105,6 +106,33 @@ export default async function AdminOrderDetailPage({
               <dt>Total</dt>
               <dd>{formatPrice(order.total)}</dd>
             </div>
+          </dl>
+
+          {/* The Razorpay ids are the whole point of this block: when a
+              customer disputes a charge, these are what the dashboard is
+              searched by. */}
+          <p className="eyebrow mt-8 text-ink-soft">Payment</p>
+          <dl className="mt-3 space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-soft">Status</dt>
+              <dd className="font-semibold">
+                {order.paymentStatus === "PAID" && order.paidAt
+                  ? `Paid · ${stampFormatter.format(order.paidAt)}`
+                  : PAYMENT_STATUS_LABEL[order.paymentStatus]}
+              </dd>
+            </div>
+            {order.razorpayPaymentId && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-soft">Payment ID</dt>
+                <dd className="break-all font-mono text-xs">{order.razorpayPaymentId}</dd>
+              </div>
+            )}
+            {order.razorpayOrderId && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-soft">Razorpay order</dt>
+                <dd className="break-all font-mono text-xs">{order.razorpayOrderId}</dd>
+              </div>
+            )}
           </dl>
 
           <p className="eyebrow mt-8 text-ink-soft">Ship To</p>

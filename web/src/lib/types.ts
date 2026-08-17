@@ -2,7 +2,6 @@
 // (Product / ProductVariant / Order / OrderItem) so the swap from static data
 // to a real backend later is a data-source change, not a type change.
 
-import type { OrderStatus } from "@prisma/client";
 import type { ProductCategory } from "./shop-filters";
 
 export interface FragranceNotes {
@@ -70,6 +69,20 @@ export interface OrderPayload {
 
 export interface OrderConfirmation {
   orderId: string;
-  status: OrderStatus;
   estimatedDelivery: string;
+}
+
+/**
+ * What the browser needs to open the Razorpay modal. `keyId` is the publishable
+ * half of the key pair and is meant to be seen by the client; it is sent in the
+ * response rather than inlined as a NEXT_PUBLIC_ build-time variable so that
+ * rotating a key or moving between test and live is a server env change alone.
+ */
+export interface CheckoutSession {
+  orderId: string;
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  prefill: { name: string; email: string; contact: string };
 }
