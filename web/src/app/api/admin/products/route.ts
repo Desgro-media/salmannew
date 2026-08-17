@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { productInputSchema } from "@/lib/admin-schema";
 import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
+import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET() {
   const [products, stats] = await Promise.all([
@@ -56,6 +57,11 @@ export async function POST(request: Request) {
     },
     include: { sizes: true },
   });
+
+  // A new product belongs on the shop grid and, if flagged, the homepage rows —
+  // neither of which refreshed before, so a freshly created scent stayed
+  // invisible until the ISR window lapsed.
+  revalidateStorefront();
 
   return NextResponse.json(created, { status: 201 });
 }

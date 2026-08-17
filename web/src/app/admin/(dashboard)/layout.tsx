@@ -32,7 +32,11 @@ export default function AdminDashboardLayout({
         <div className="container-grid grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 py-3 md:flex md:justify-between md:gap-8 md:py-5">
           <Link
             href="/admin"
-            className="col-start-2 row-start-1 flex min-h-11 items-center justify-center text-sm font-black uppercase tracking-[0.14em] md:min-h-0 md:justify-start"
+            // Sits toward the top of its cell rather than centred on the logout
+            // button's midline. Achieved by aligning the text within the box
+            // instead of nudging the box itself, so the 44px touch target stays
+            // where it is.
+            className="col-start-2 row-start-1 flex min-h-11 items-start justify-center pt-1.5 text-sm font-black uppercase tracking-[0.14em] md:min-h-0 md:items-center md:pt-0 md:justify-start"
           >
             Admin
           </Link>

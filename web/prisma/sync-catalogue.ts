@@ -147,6 +147,47 @@ async function main() {
   console.log(
     `\n${dryRun ? "Would sync" : "Synced"} ${products.length} products (${created} new, ${updated} existing).`,
   );
+
+  if (!dryRun) await purgeStorefrontCache();
+}
+
+/**
+ * Writing straight to the database leaves the deployed app's page cache
+ * untouched — it has no idea anything changed. The storefront's pages are ISR
+ * (`revalidate = 60` in (site)/layout.tsx) and Vercel serves them
+ * stale-while-revalidate per edge region, so without this the catalogue looks
+ * updated to whoever triggers the regeneration and stale to everyone else for
+ * up to a minute per region.
+ *
+ * Best-effort on purpose: the data is already committed by this point, and the
+ * pages do eventually refresh on their own. A failed purge is worth a warning,
+ * never a non-zero exit that makes a successful sync look broken.
+ */
+async function purgeStorefrontCache() {
+  const url = process.env.REVALIDATE_URL;
+  const secret = process.env.REVALIDATE_SECRET;
+
+  if (!url || !secret) {
+    console.log(
+      "\nREVALIDATE_URL / REVALIDATE_SECRET not set — skipping cache purge.\n" +
+        "Deployed pages will pick this up within their 60s ISR window.",
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    console.log(`\nPurged the storefront cache at ${new URL(url).host}.`);
+  } catch (err) {
+    console.warn(
+      `\nCache purge failed (${err instanceof Error ? err.message : err}).\n` +
+        "The data is synced — pages refresh within 60s regardless.",
+    );
+  }
 }
 
 main()
