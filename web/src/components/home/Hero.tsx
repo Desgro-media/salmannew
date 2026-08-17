@@ -12,14 +12,6 @@ import {
 } from "framer-motion";
 import { ButtonLink } from "@/components/ui/Button";
 import { MARK_ASPECT, MARK_PATH, MARK_TRANSFORM, MARK_VIEWBOX } from "./mark-path";
-import {
-  LOCKUP_ASPECT,
-  WORDMARK_LETTERS,
-  WORDMARK_SUB,
-  WORDMARK_TRANSFORM,
-} from "./wordmark-path";
-
-const WORD = WORDMARK_LETTERS.map((letter) => letter.char).join("");
 
 const MARK_ID = "salman-hero-mark";
 const MARK_FACE_GRADIENT_ID = "salman-hero-mark-face";
@@ -57,18 +49,6 @@ const FACE_STOPS = [
   { offset: "100%", color: "#b87d05" },
 ];
 
-const letterVariants = {
-  hidden: { y: "110%" },
-  visible: (i: number) => ({
-    y: "0%",
-    transition: {
-      duration: 1,
-      delay: 0.15 + i * 0.055,
-      ease: [0.16, 1, 0.3, 1] as const,
-    },
-  }),
-};
-
 export function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   // Cached on hover instead of read per mousemove: getBoundingClientRect()
@@ -89,13 +69,12 @@ export function Hero() {
   const mvY = useMotionValue(0);
   const springX = useSpring(mvX, { stiffness: 60, damping: 18, mass: 0.6 });
   const springY = useSpring(mvY, { stiffness: 60, damping: 18, mass: 0.6 });
-  const wordX = useTransform(springX, [-1, 1], [-16, 16]);
-  const wordY = useTransform(springY, [-1, 1], [-10, 10]);
-  // The mark sits behind the letters and drifts the opposite way at about a
-  // third of the throw. Opposed, shorter travel is what sells it as depth
-  // rather than as one flat plate sliding around.
-  const markX = useTransform(springX, [-1, 1], [7, -7]);
-  const markY = useTransform(springY, [-1, 1], [5, -5]);
+  // Drift with the cursor. The throw was deliberately short while the mark sat
+  // behind the wordmark and only had to suggest depth against it; now that it
+  // is alone on the page there is nothing to be parallax *against*, so it
+  // follows the cursor directly and a little further.
+  const markX = useTransform(springX, [-1, 1], [-14, 14]);
+  const markY = useTransform(springY, [-1, 1], [-10, 10]);
   // Turning to face the cursor: moving right swings the left edge forward, and
   // moving down brings the top forward. Kept to ±12/±9 so the extrusion is
   // revealed along one side without the mark ever reading as a flat card that
@@ -154,29 +133,30 @@ export function Hero() {
         </motion.p>
       </div>
 
-      {/* Giant kinetic wordmark seated on the brand mark. This wrapper is
-          scroll-scaled, and scaling vector artwork re-rasterises it at each new
-          size — expensive at this scale, and 4x worse on a Retina display,
-          which is why the page used to feel heavy there specifically.
-          will-change keeps the whole group on its own composited layer so the
-          scroll transform is a cheap matrix change instead. */}
+      {/* The brand mark, alone. This wrapper is scroll-scaled, and scaling
+          vector artwork re-rasterises it at each new size — expensive at this
+          scale, and 4x worse on a Retina display, which is why the page used to
+          feel heavy there specifically. will-change keeps the whole group on its
+          own composited layer so the scroll transform is a cheap matrix change
+          instead. */}
       <motion.div
         style={{ scale, opacity, y, willChange: "transform, opacity" }}
         className="relative flex flex-1 flex-col items-center justify-center py-6"
       >
-        {/* Brand mark, centred behind the letters. Flex-centred rather than
-            translate-centred so Framer Motion owns `transform` outright and
-            nothing fights it for the property.
+        {/* Flex-centred rather than translate-centred so Framer Motion owns
+            `transform` outright and nothing fights it for the property.
 
             Three nested layers because each owns a different transform with its
             own lifetime — pointer parallax, a one-shot entrance, and the idle
             loop. Stacking them beats trying to reconcile all three on one
             element, and every one animates transform/opacity only, so this
             whole thing lives on the compositor. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center"
-        >
+        {/* Taken out of flow deliberately. In flow the mark's own height pushes
+            the bottom row (Shop Now / Explore Collection) below the fold on a
+            laptop; centred as an overlay it can be as large as it likes while
+            the section's justify-between still pins that row to the bottom of
+            the viewport. */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           {/* Geometry is declared once and every slice below is a <use> of it,
               so the ~10KB of path data is paid for a single time no matter how
               deep the extrusion gets. */}
@@ -202,11 +182,13 @@ export function Hero() {
               3D context, because L1 itself is flat and only its descendants
               preserve depth. */}
           <motion.div
+            role="img"
+            aria-label="Salman Perfumes"
             initial={reduceMotion ? false : { opacity: 0, scale: 1.06 }}
-            // Higher than it was against the old near-white ground: cream is
-            // closer in value to the gold, so a translucent mark washes into it
-            // and the face gradient stops reading as metal.
-            animate={{ opacity: 0.85, scale: 1 }}
+            // Fully opaque now. The 0.85 was there to stop the mark competing
+            // with the wordmark sitting on top of it; with nothing in front of
+            // it, holding it back only greys the gold against the white ground.
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
             style={{
               x: markX,
@@ -215,10 +197,11 @@ export function Hero() {
               perspective: "1100px",
               willChange: "transform, opacity",
             }}
-            // Sized off viewport height so the mark keeps its proportion to the
-            // wordmark (which is sized off viewport width) rather than
-            // swallowing it on a tall, narrow phone.
-            className="relative h-[42vh] max-h-[470px] sm:h-[56vh] sm:max-h-[680px] lg:h-[74vh] lg:max-h-[880px]"
+            // Sized off viewport height rather than width: the mark is tall and
+            // narrow, so height is what decides whether it clears the eyebrow
+            // row above and the buttons below. Sizing it by width would swallow
+            // both on a narrow phone.
+            className="relative h-[44vh] max-h-[500px] sm:h-[58vh] sm:max-h-[700px] lg:h-[70vh] lg:max-h-[840px]"
           >
             {/* Bloom sits outside the 3D group on purpose — it carries a 48px
                 blur, and a blurred layer inside a preserved-3d context gets
@@ -296,95 +279,6 @@ export function Hero() {
           </motion.div>
         </div>
 
-        <div className="relative flex w-full items-center justify-center">
-          {/* Set in the logo's own outlines rather than a font, so the hero and
-              the label on the bottle are the same drawing. The letters are
-              placed off the geometry's percentages instead of being flowed in a
-              row: their boxes overlap where the N's swash sweeps back under the
-              second A, and laying them out as a run would pull that apart.
-
-              Sized by width here, where the mark behind is sized by height —
-              between them they hold the lockup's proportion on any shape of
-              screen. */}
-          <motion.div
-            style={{ x: wordX, y: wordY, aspectRatio: LOCKUP_ASPECT }}
-            role="img"
-            aria-label={`${WORD} Perfumes`}
-            className="relative w-[92vw] max-w-[1180px] select-none sm:w-[84vw] md:w-[76vw] lg:w-[68vw]"
-          >
-            {WORDMARK_LETTERS.map((letter, i) => (
-              <span
-                key={i}
-                className="absolute overflow-hidden"
-                style={{
-                  left: `${letter.left}%`,
-                  top: `${letter.top}%`,
-                  width: `${letter.width}%`,
-                  height: `${letter.height}%`,
-                }}
-              >
-                <motion.span
-                  custom={i}
-                  initial={reduceMotion ? false : "hidden"}
-                  animate="visible"
-                  variants={letterVariants}
-                  whileHover={{ y: -14, color: "var(--color-gold-deep)" }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="block h-full w-full text-ink"
-                >
-                  {/* evenodd for the same reason as the mark: the counters are
-                      holes in the same compound path per letter. */}
-                  <svg
-                    viewBox={letter.viewBox}
-                    className="h-full w-full"
-                    aria-hidden
-                    focusable="false"
-                  >
-                    <path
-                      transform={WORDMARK_TRANSFORM}
-                      fillRule="evenodd"
-                      fill="currentColor"
-                      d={letter.d}
-                    />
-                  </svg>
-                </motion.span>
-              </span>
-            ))}
-
-            {/* PERFUMES, sitting where the logo puts it — centred under the
-                word at just under half its width. Its position and scale are
-                the lockup's own percentages, so the two lines hold the
-                printed relationship at any size rather than being spaced by
-                eye. It fades in after the last letter has landed. */}
-            <motion.span
-              aria-hidden
-              initial={reduceMotion ? false : { opacity: 0, y: "40%" }}
-              animate={{ opacity: 1, y: "0%" }}
-              transition={{ duration: 0.8, delay: 0.62, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute block text-ink"
-              style={{
-                left: `${WORDMARK_SUB.left}%`,
-                top: `${WORDMARK_SUB.top}%`,
-                width: `${WORDMARK_SUB.width}%`,
-                height: `${WORDMARK_SUB.height}%`,
-              }}
-            >
-              <svg
-                viewBox={WORDMARK_SUB.viewBox}
-                className="h-full w-full"
-                aria-hidden
-                focusable="false"
-              >
-                <path
-                  transform={WORDMARK_TRANSFORM}
-                  fillRule="evenodd"
-                  fill="currentColor"
-                  d={WORDMARK_SUB.d}
-                />
-              </svg>
-            </motion.span>
-          </motion.div>
-        </div>
       </motion.div>
 
       {/* bottom row */}

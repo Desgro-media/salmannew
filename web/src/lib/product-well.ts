@@ -24,8 +24,10 @@ export function wellSurface(accent: string): string {
     `radial-gradient(72% 38% at 50% 100%, ${accent}2e 0%, ${accent}00 72%)`,
     // key light, high and centred, blowing the sweep to white behind the cap
     "radial-gradient(70% 50% at 50% 16%, #ffffff 0%, rgba(255,255,255,0) 72%)",
-    // the sweep itself: white at the top, easing into a warm floor that agrees
-    // with the cream the card sits on
-    "linear-gradient(180deg, #ffffff 0%, #fdfbf7 48%, #efe8db 100%)",
+    // the sweep itself: white at the top, easing into a floor a couple of steps
+    // below the white page the card now sits on. The floor used to be cream, to
+    // agree with a cream ground; left that warm against white it reads as a
+    // yellow smudge under the bottle rather than as shadow.
+    "linear-gradient(180deg, #ffffff 0%, #fbfaf8 48%, #eeece7 100%)",
   ].join(",");
 }
