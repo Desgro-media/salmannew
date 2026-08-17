@@ -3,29 +3,31 @@
 :root {
   --color-ink: #131110;
   --color-ink-soft: #3a3632;
-  /* Cream, not off-white: the ramp keeps a steady ~36deg hue and steps down in
-     lightness, so paper / paper-2 / paper-3 stay a single family and any
-     surface layered on another still separates. Saturation is what reads as
-     "cream" rather than "white" — lightness alone just looks grey.
+  /* White, with the layered surfaces stepping down from it. The ramp keeps a
+     trace of the old warmth — a ~40deg hue at very low saturation — so the
+     greys read as warm rather than blue, and the gold still belongs on them.
+     Dropping to pure neutral grey here makes the gold look inserted.
 
-     This ground is a good deal deeper than an off-white, which eats contrast
-     headroom: ink-soft is darkened to match below. Warming it any further
-     means darkening the text tokens again. */
-  --color-paper: #ebdcc8;
-  --color-paper-2: #e3d2ba;
-  --color-paper-3: #dbc8ab;
-  --color-line: #cbb692;
+     paper is a true #fff: it is the page ground, and everything layered on it
+     (paper-2 for hovers and inset panels, paper-3 a step below that) has to
+     separate by going darker, since there is nowhere lighter left to go. */
+  --color-paper: #ffffff;
+  --color-paper-2: #f7f6f4;
+  --color-paper-3: #eeece8;
+  --color-line: #e4e1db;
   --color-line-strong: #131110;
   --color-gold: #ffc41c;
   --color-gold-deep: #a9782c;
   --color-gold-ink: #6f5420;
-  --color-cream: #ebdcc8;
+  --color-cream: #ffffff;
   /* The square well a bottle sits in, on the shop grid and the homepage rows.
-     White rather than a step in the cream ramp: the cutouts are lit as product
-     shots on white, and against cream the bottles' own highlights read as a
-     dull grey cast. It is the one surface in the app that deliberately leaves
-     the ramp, which is why it has its own token — the well's fill and the
-     vignette that fades the cutout into it must always name the same colour. */
+     Still white, and now the same value as the page behind it — the well no
+     longer separates by fill. It does not need to: its border is drawn in the
+     product's own accent, and wellSurface() paints a lit sweep and a contact
+     shadow inside it, so the card still reads as a photographed surface rather
+     than a flat patch of page. Kept as its own token because the fill and the
+     vignette that fades the cutout into it must always name the same colour,
+     and because product shots want a true white ground whatever the page does. */
   --color-well: #ffffff;
 
   --font-display: var(--font-archivo);
