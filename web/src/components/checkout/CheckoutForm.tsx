@@ -3,13 +3,16 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCart, cartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
-import { placeOrder } from "@/lib/orders";
+import { confirmPayment, startCheckout } from "@/lib/orders";
 import { useHasMounted } from "@/lib/use-has-mounted";
-import { calculateShipping } from "@/lib/shipping";
+import { calculateShipping, type ShippingSettings } from "@/lib/shipping";
 import type { CustomerDetails } from "@/lib/types";
+
+const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 const FIELDS: { name: keyof CustomerDetails; label: string; type?: string; span?: 1 | 2 }[] = [
   { name: "fullName", label: "Full name", span: 2 },
@@ -21,13 +24,18 @@ const FIELDS: { name: keyof CustomerDetails; label: string; type?: string; span?
   { name: "pincode", label: "Pincode" },
 ];
 
-export function CheckoutForm() {
+// Settings arrive as props from the server page rather than being read here:
+// this is a Client Component, and importing the Prisma-backed accessor would
+// pull the database client into the browser bundle. The figure shown is only a
+// preview either way — /api/orders recomputes the charge server-side.
+export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
   const mounted = useHasMounted();
   const router = useRouter();
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gatewayReady, setGatewayReady] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [customer, setCustomer] = useState<CustomerDetails>({
     fullName: "",
@@ -51,25 +59,86 @@ export function CheckoutForm() {
   }, []);
 
   const subtotal = mounted ? cartSubtotal(items) : 0;
-  const shipping = calculateShipping(subtotal);
+  const shipping = calculateShipping(subtotal, settings);
   const total = subtotal + shipping;
 
+  /**
+   * Checkout runs in three acts: reserve the order, let Razorpay collect the
+   * money, then have our server verify what the modal claims happened.
+   *
+   * `submitting` deliberately stays true while the modal is open — the form
+   * behind it must not accept a second submission, which would reserve a second
+   * order and charge twice. Every path out of the modal (success, failure,
+   * dismissal) is responsible for clearing it, or the customer is stranded with
+   * a dead button.
+   */
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      const confirmation = await placeOrder({ items, customer, subtotal });
-      clear();
-      router.push(
-        `/checkout/success?order=${confirmation.orderId}&eta=${encodeURIComponent(
-          confirmation.estimatedDelivery,
-        )}`,
-      );
-    } catch {
-      setError("Something went wrong placing your order. Please try again.");
+
+    if (!window.Razorpay) {
+      setError("The payment window could not load. Check your connection and try again.");
       setSubmitting(false);
+      return;
     }
+
+    let session;
+    try {
+      session = await startCheckout({ items, customer, subtotal });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout.");
+      setSubmitting(false);
+      return;
+    }
+
+    const razorpay = new window.Razorpay({
+      key: session.keyId,
+      amount: session.amount,
+      currency: session.currency,
+      name: "Salman Perfumes",
+      description: `Order ${session.orderId}`,
+      order_id: session.razorpayOrderId,
+      prefill: session.prefill,
+      theme: { color: "#111111" },
+      handler: async (response) => {
+        try {
+          const confirmation = await confirmPayment(response);
+          // Only now — the bag is not emptied on a payment we have not verified.
+          clear();
+          router.push(
+            `/checkout/success?order=${confirmation.orderId}&eta=${encodeURIComponent(
+              confirmation.estimatedDelivery,
+            )}`,
+          );
+        } catch {
+          // The money may well have been taken; the webhook will settle the
+          // order either way. What must not happen is telling them it failed
+          // and inviting a second payment.
+          setError(
+            `Your payment went through but we could not confirm it here. ` +
+              `Your order number is ${session.orderId} — please contact us before paying again.`,
+          );
+          setSubmitting(false);
+        }
+      },
+      modal: {
+        // Closing the modal is a change of mind, not an error. The PENDING
+        // order stays behind as a record; the cart is untouched so they can
+        // pick up where they left off.
+        ondismiss: () => setSubmitting(false),
+      },
+    });
+
+    razorpay.on("payment.failed", (response) => {
+      setError(
+        response.error.description ??
+          "Your payment did not go through. No money was taken — please try again.",
+      );
+      setSubmitting(false);
+    });
+
+    razorpay.open();
   }
 
   if (mounted && items.length === 0) {
@@ -91,6 +160,17 @@ export function CheckoutForm() {
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-12 md:grid-cols-12"
     >
+      {/* onReady rather than onLoad: it fires on re-mount too, so navigating
+          away and back to checkout does not leave the button disabled against
+          an already-loaded script. */}
+      <Script
+        src={RAZORPAY_CHECKOUT_SRC}
+        onReady={() => setGatewayReady(true)}
+        onError={() =>
+          setError("The payment window could not load. Check your connection and try again.")
+        }
+      />
+
       <div className="md:col-span-7">
         <p className="text-xs text-ink-soft">
           {accountEmail ? (
@@ -135,13 +215,13 @@ export function CheckoutForm() {
 
         <button
           type="submit"
-          disabled={submitting || !mounted || items.length === 0}
+          disabled={submitting || !mounted || !gatewayReady || items.length === 0}
           className="mt-8 w-full bg-ink px-7 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-paper transition-colors hover:bg-gold hover:text-ink disabled:opacity-40 sm:w-auto sm:px-14"
         >
-          {submitting ? "Placing Order…" : `Place Order · ${formatPrice(total)}`}
+          {submitting ? "Opening Payment…" : `Pay ${formatPrice(total)}`}
         </button>
         <p className="mt-3 text-xs text-ink-soft">
-          Demo checkout — no payment is captured.
+          Secure payment by Razorpay · UPI, cards, netbanking &amp; wallets.
         </p>
       </div>
 

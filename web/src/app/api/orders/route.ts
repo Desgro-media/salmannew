@@ -2,10 +2,25 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { calculateShipping } from "@/lib/shipping";
+import { getStoreSettings } from "@/lib/store-settings";
 import { orderPayloadSchema } from "@/lib/order-schema";
-import { OrderStatus } from "@/lib/order-status";
+import { createRazorpayOrder, razorpayKeyId, toPaise } from "@/lib/razorpay";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
 
+/**
+ * Opens a checkout: writes the order as PENDING and hands the browser what it
+ * needs to open the Razorpay modal.
+ *
+ * The order row is created *before* payment on purpose. The webhook identifies
+ * an order by its Razorpay order id, so a row has to exist to be found — and a
+ * customer who pays and then loses their connection must still end up with an
+ * order. The cost is a PENDING row per abandoned checkout, which is the honest
+ * record of what happened and is filtered out of the fulfilment queue.
+ *
+ * Nothing here is customer-visible yet: the RECEIVED checkpoint is raised by
+ * markOrderPaid(), so an unpaid order has an empty timeline and cannot be
+ * tracked.
+ */
 export async function POST(request: Request) {
   const json = await request.json();
   const parsed = orderPayloadSchema.safeParse(json);
@@ -44,11 +59,32 @@ export async function POST(request: Request) {
     const size = sizeById.get(item.sizeId)!;
     return sum + size.price * item.quantity;
   }, 0);
-  const shipping = calculateShipping(subtotal);
+  // Read here, not taken from the client: the summary the browser rendered may
+  // predate an admin changing the rate, and the charge must follow the current
+  // setting rather than a stale page.
+  const shipping = calculateShipping(subtotal, await getStoreSettings());
   const total = subtotal + shipping;
 
   const orderNumber = `SP-${Date.now().toString(36).toUpperCase()}`;
   const estimatedDeliveryDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+  // Before the row, so a gateway outage leaves no orphan PENDING order behind.
+  let razorpayOrder;
+  try {
+    razorpayOrder = await createRazorpayOrder({
+      amountInPaise: toPaise(total),
+      receipt: orderNumber,
+      // Surfaced in the Razorpay dashboard, which is where reconciliation
+      // actually happens when someone asks about a specific payment.
+      notes: { orderNumber, customerEmail: customer.email },
+    });
+  } catch (error) {
+    console.error("[razorpay] could not create order", error);
+    return NextResponse.json(
+      { error: "Payment could not be started. Please try again in a moment." },
+      { status: 502 },
+    );
+  }
 
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
@@ -57,6 +93,7 @@ export async function POST(request: Request) {
         subtotal,
         shipping,
         total,
+        razorpayOrderId: razorpayOrder.id,
         customerId: customerSession?.sub,
         customerFullName: customer.fullName,
         customerEmail: customer.email,
@@ -66,12 +103,6 @@ export async function POST(request: Request) {
         customerState: customer.state,
         customerPincode: customer.pincode,
         estimatedDelivery: estimatedDeliveryDate,
-        // The first checkpoint is raised here rather than by the admin, so the
-        // tracking timeline has something real to show the moment checkout
-        // finishes. adminId stays null — nobody moved it, the order arrived.
-        statusEvents: {
-          create: [{ status: OrderStatus.RECEIVED }],
-        },
         items: {
           create: items.map((item) => {
             const size = sizeById.get(item.sizeId)!;
@@ -111,10 +142,16 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     orderId: order.orderNumber,
-    status: order.status,
-    estimatedDelivery: estimatedDeliveryDate.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-    }),
+    razorpayOrderId: razorpayOrder.id,
+    // Echoed from Razorpay rather than recomputed, so the modal can only ever
+    // display the figure the gateway will actually charge.
+    amount: razorpayOrder.amount,
+    currency: razorpayOrder.currency,
+    keyId: razorpayKeyId(),
+    prefill: {
+      name: customer.fullName,
+      email: customer.email,
+      contact: customer.phone,
+    },
   });
 }

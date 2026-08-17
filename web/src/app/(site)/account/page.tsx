@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { PAID_ORDER_FILTER } from "@/lib/payments";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
 import { formatPrice } from "@/lib/format";
 import { LogoutLink } from "@/components/account/LogoutLink";
@@ -24,7 +25,9 @@ export default async function AccountPage() {
   }
 
   const orders = await prisma.order.findMany({
-    where: { customerId: customer.id },
+    // Abandoned checkouts are not order history — showing one here would read
+    // as "you bought this" for something never paid for.
+    where: { customerId: customer.id, ...PAID_ORDER_FILTER },
     include: {
       items: true,
       statusEvents: { orderBy: { createdAt: "asc" } },
