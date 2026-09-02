@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/products";
+import { Marquee } from "@/components/layout/Marquee";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import {
   PRICE_BANDS,
@@ -35,6 +36,11 @@ export default async function ShopPage({
 
   return (
     <div className="pt-16 md:pt-20">
+      {/* Marquee sizes its scrolling row to its own content (w-max), so a
+          single short phrase leaves the rest of the bar blank instead of
+          looping continuously. Repeating it keeps the row at least as wide
+          as the screen. */}
+      <Marquee items={Array(20).fill("Salman Perfumes")} />
       <div className="container-grid border-b border-line py-14 md:py-20">
         <p className="eyebrow text-ink-soft">Shop</p>
         <h1 className="mt-3 text-5xl font-black tracking-tight md:text-7xl">
