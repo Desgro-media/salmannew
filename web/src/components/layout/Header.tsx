@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
@@ -74,24 +73,6 @@ export function Header() {
           className="relative inline-flex shrink-0 items-center"
           aria-label="Salman Perfumes — home"
         >
-          {/* Behind the letters rather than beside them, the way the hero sets
-              the two. The flame is narrow enough at this height that it reads
-              through the middle of SALMAN and clears the S and the N's swash;
-              held under full strength so the letterforms stay the black shape
-              the eye lands on first. */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 aspect-[1406/2628] h-[190%] -translate-x-1/2 -translate-y-1/2 opacity-55"
-          >
-            <Image
-              src="/logo/mark-gold-transparent.png"
-              alt=""
-              fill
-              sizes="32px"
-              className="object-contain"
-              priority
-            />
-          </span>
           {/* The lockup's own outlines rather than SALMAN / PERFUMES set in the
               UI sans. One path for both lines, because nothing here animates
               per letter — the hero is the only place that needs them apart. */}
