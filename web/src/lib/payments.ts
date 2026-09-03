@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
+import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@/lib/order-status";
+import { notifyOwnerOfPaidOrder } from "@/lib/notify-owner";
 
 /**
  * What counts as a real order: one the money arrived for.
@@ -32,15 +34,37 @@ export const PAID_ORDER_FILTER = {
  * event rather than appending a duplicate "Order placed" to the timeline. Doing
  * this as a conditional update rather than read-then-write also closes the race
  * where both arrive at once and each sees PENDING.
+ *
+ * That same `count > 0` check is also what gates the owner's new-order email —
+ * it fires exactly once per order, on whichever caller wins the race, never on
+ * the loser.
  */
 export async function markOrderPaid(input: {
   razorpayOrderId: string;
   razorpayPaymentId: string;
 }): Promise<{ orderNumber: string; estimatedDelivery: Date } | null> {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { razorpayOrderId: input.razorpayOrderId },
-      select: { id: true, orderNumber: true, estimatedDelivery: true, paymentStatus: true },
+      select: {
+        id: true,
+        orderNumber: true,
+        estimatedDelivery: true,
+        paymentStatus: true,
+        subtotal: true,
+        shipping: true,
+        total: true,
+        customerFullName: true,
+        customerEmail: true,
+        customerPhone: true,
+        customerAddress: true,
+        customerCity: true,
+        customerState: true,
+        customerPincode: true,
+        items: {
+          select: { name: true, sizeLabel: true, quantity: true, price: true },
+        },
+      },
     });
 
     if (!order) return null;
@@ -60,8 +84,24 @@ export async function markOrderPaid(input: {
       });
     }
 
-    return { orderNumber: order.orderNumber, estimatedDelivery: order.estimatedDelivery };
+    return { order, justPaid: count > 0 };
   });
+
+  if (!result) return null;
+
+  if (result.justPaid) {
+    // Scheduled for after the response goes out, so a slow (or down) Brevo
+    // API never adds latency to the payment confirmation the customer or
+    // Razorpay's webhook is waiting on. `after()` keeps the serverless
+    // function alive until this settles, unlike a bare unawaited promise.
+    after(() =>
+      notifyOwnerOfPaidOrder(result.order).catch((error) => {
+        console.error("[email] failed to notify owner of order", result.order.orderNumber, error);
+      }),
+    );
+  }
+
+  return { orderNumber: result.order.orderNumber, estimatedDelivery: result.order.estimatedDelivery };
 }
 
 /**
