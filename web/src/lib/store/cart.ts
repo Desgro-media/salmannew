@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartLine } from "@/lib/types";
+import { trackAddToCart } from "@/lib/meta-pixel";
 
 interface CartState {
   items: CartLine[];
@@ -38,6 +39,9 @@ export const useCart = create<CartState>()(
           set({ items: [...get().items, { ...line, quantity }] });
         }
         set({ isOpen: true });
+        // Here rather than at each button: the product page and the shop cards
+        // both add through this, and a third would otherwise go unreported.
+        trackAddToCart(line, quantity);
       },
       removeItem: (sizeId) =>
         set({ items: get().items.filter((i) => i.sizeId !== sizeId) }),

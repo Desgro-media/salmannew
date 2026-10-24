@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
@@ -8,6 +8,11 @@ import { useRouter } from "next/navigation";
 import { useCart, cartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
 import { confirmPayment, startCheckout } from "@/lib/orders";
+import {
+  trackAddPaymentInfo,
+  trackInitiateCheckout,
+  trackPurchase,
+} from "@/lib/meta-pixel";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import { calculateShipping, type ShippingSettings } from "@/lib/shipping";
 import type { CustomerDetails } from "@/lib/types";
@@ -37,6 +42,7 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
   const [error, setError] = useState<string | null>(null);
   const [gatewayReady, setGatewayReady] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const initiatedCheckout = useRef(false);
   const [customer, setCustomer] = useState<CustomerDetails>({
     fullName: "",
     email: "",
@@ -61,6 +67,15 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
   const subtotal = mounted ? cartSubtotal(items) : 0;
   const shipping = calculateShipping(subtotal, settings);
   const total = subtotal + shipping;
+
+  // Once per visit to this page, and only for a bag with something in it — the
+  // empty-bag screen below is not a checkout. Waits on `mounted` because the
+  // persisted bag cannot be read before then.
+  useEffect(() => {
+    if (!mounted || items.length === 0 || initiatedCheckout.current) return;
+    initiatedCheckout.current = true;
+    trackInitiateCheckout(items, total);
+  }, [mounted, items, total]);
 
   /**
    * Checkout runs in three acts: reserve the order, let Razorpay collect the
@@ -104,6 +119,11 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
       handler: async (response) => {
         try {
           const confirmation = await confirmPayment(response);
+          // Reported here, on the one path that means a verified payment,
+          // rather than from the success page: that page is just a URL, and a
+          // reload or a shared link would count the same order again. The
+          // figure is the gateway's, in paise, not the preview above.
+          trackPurchase(items, session.amount / 100, confirmation.orderId);
           // Only now — the bag is not emptied on a payment we have not verified.
           clear();
           router.push(
@@ -138,6 +158,11 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
       setSubmitting(false);
     });
 
+    // The modal is the payment step: the order is reserved and all that is left
+    // is for them to pay. Razorpay reports nothing finer than success, failure
+    // and dismissal, so this is as close to "payment info added" as the browser
+    // can see. Retrying after a dismissal reserves a new order, and counts again.
+    trackAddPaymentInfo(items, session.amount / 100);
     razorpay.open();
   }
 

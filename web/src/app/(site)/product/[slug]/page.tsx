@@ -8,6 +8,7 @@ import { NotesPyramid } from "@/components/product/NotesPyramid";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductReviews } from "@/components/product/ProductReviews";
+import { ViewContent } from "@/components/analytics/ViewContent";
 import { Reveal } from "@/components/motion/Reveal";
 import { categoryLabel } from "@/lib/shop-filters";
 import { formatPrice } from "@/lib/format";
@@ -45,8 +46,18 @@ export default async function ProductPage({
 
   const related = await getRelatedProducts(slug, 3);
 
+  // The size the page opens on, and so the price a visitor sees first.
+  const openingSize = product.sizes[0];
+
   return (
     <div className="pt-16 md:pt-20">
+      {openingSize && (
+        <ViewContent
+          sku={openingSize.sku}
+          name={product.name}
+          price={openingSize.price}
+        />
+      )}
       <div className="container-grid py-4 text-xs text-ink-soft">
         <span>Shop</span> <span className="mx-1.5">/</span>{" "}
         <span className="text-ink">{product.name}</span>
