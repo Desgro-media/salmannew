@@ -49,7 +49,13 @@ export default async function ShopPage({
       </div>
 
       <div className="container-grid py-12 md:py-16">
+        {/* ShopGrid seeds its state from the initial* props once, on mount. The
+            header links (Best Sellers, Signature Collections) change ?type= while
+            this page is already open, which Next treats as the same page — so
+            without a key the URL moves and the grid stays put. Keying on the
+            parsed values remounts it with the new filter. */}
         <ShopGrid
+          key={`${initialFilter}|${initialType}|${initialBand}|${initialSort}`}
           products={products}
           initialFilter={initialFilter}
           initialType={initialType}
