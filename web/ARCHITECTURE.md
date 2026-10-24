@@ -98,6 +98,7 @@ Required env vars (see `.env.example`):
 | `SESSION_SECRET` | `lib/auth.ts` | JWT signing key for admin sessions — **throws at runtime if unset** when an admin route is hit |
 | `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` | `prisma/seed.ts` | only used by `npx prisma db seed` |
 | `BLOB_READ_WRITE_TOKEN` | `app/api/admin/uploads/route.ts` | optional locally (falls back to writing `public/uploads/`); required-in-practice on Vercel |
+| `META_PIXEL_ID` | `components/analytics/MetaPixel.tsx` | optional — the numeric Meta pixel id; unset means no pixel loads. Set on **Production only** (§9.8) |
 
 Seed the DB (superadmin account + 6 products):
 
@@ -367,6 +368,23 @@ Run with `npx prisma db seed` (command wired via `prisma.config.ts`, **not** a `
 1. **`seedSuperadmin()`** — requires `SEED_SUPERADMIN_EMAIL`/`SEED_SUPERADMIN_PASSWORD` (throws if unset), upserts an `Admin` row by email. ⚠️ **Always forces `role: SUPERADMIN`** on both the create *and* update branch — re-running the seed against an existing admin's email will silently promote them, not just reset their password.
 2. **`seedProducts()`** — upserts each product in `seed-data.ts` by `slug`, and each size by `sku`. Seed-authored size ids (`"imperial-30"`, etc.) don't follow the `sku.toLowerCase()` convention the admin API uses for new sizes — both are valid, just don't assume one format.
 
+### 9.8 Meta Pixel — `components/analytics/MetaPixel.tsx`, `lib/meta-pixel.ts`
+
+Conversion tracking for Meta (Facebook / Instagram) ads. The base snippet is mounted in the `(site)` layout, so it loads on the storefront only — `/admin` and `/delivery` never report — and only when `META_PIXEL_ID` is set. Leave it unset in dev and on preview deploys: with it set, every browse and every test checkout is reported to Meta as a real customer.
+
+| Event | Fires when | Where |
+|---|---|---|
+| `PageView` | a page loads, and on every in-app navigation (Meta's script hooks `history.pushState` itself) | the snippet in `MetaPixel.tsx` |
+| `ViewContent` | a product page opens (opening size's SKU + price) | `components/analytics/ViewContent.tsx`, rendered by `product/[slug]/page.tsx` |
+| `AddToCart` | anything is added to the bag | `addItem` in `lib/store/cart.ts` (covers the product page and the shop cards) |
+| `InitiateCheckout` | `/checkout` opens with items in the bag | an effect in `CheckoutForm.tsx` |
+| `AddPaymentInfo` | the Razorpay window opens | `CheckoutForm.handleSubmit` |
+| `Purchase` | the server has verified the payment | the Razorpay `handler` in `CheckoutForm.tsx` |
+
+Conventions: items are identified by **size SKU** on every event; `value` is whole rupees, shipping included on the checkout steps and `Purchase`; `Purchase` takes its value from the gateway's amount (paise ÷ 100), not the on-screen preview, and uses the order number as its event id. Every helper is a no-op when `window.fbq` does not exist, so call sites never check whether tracking is on.
+
+Two things to know when testing: Meta's script silently drops events from headless browsers (user agent `HeadlessChrome`), so an automated check must send a normal one; and it should abort requests to `www.facebook.com/tr`, so test traffic never reaches Meta.
+
 ---
 
 ## 10. Known gaps & stale docs
@@ -378,6 +396,7 @@ Run with `npx prisma db seed` (command wired via `prisma.config.ts`, **not** a `
 - **Purchasers page vs. its API twin are duplicated logic**, not shared — `app/admin/(dashboard)/products/[id]/purchasers/page.tsx` and `app/api/admin/products/[id]/purchases/route.ts` independently implement the same paginated query.
 - **Newsletter signup is fully client-side fake** — `NewsletterBand.tsx` never calls an API; no email is captured anywhere.
 - **The `images[i] ↔ sizes[i]` index pairing is a convention, not a DB constraint.** Nothing stops an admin from uploading gallery images in an order that doesn't match the sizes — if that happens, the gallery/size-sync feature (§8.3) will show the wrong photo for a given size.
+- **`Purchase` is reported by the browser only (§9.8).** An order the Razorpay webhook settles after the customer closed the tab is paid but never reaches Meta. Closing that gap means sending the event from the server (Meta's Conversions API), using the order number as the event id so it is not counted twice.
 
 ---
 
