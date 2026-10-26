@@ -10,13 +10,17 @@ export function ProductGallery({
   images,
   name,
   accent,
+  sizeCount,
 }: {
   images: string[];
   name: string;
   accent: string;
+  // images[i] pairs with sizes[i] for the first sizeCount photos; anything after
+  // that is an extra (lifestyle scene, notes sheet) with no size attached.
+  sizeCount: number;
 }) {
-  const { activeIndex, setActiveIndex } = useProductSelection();
-  const active = Math.min(activeIndex, images.length - 1);
+  const { activeIndex, setActiveIndex, extraIndex, setExtraIndex } = useProductSelection();
+  const active = extraIndex ?? Math.min(activeIndex, images.length - 1);
 
   return (
     <div
@@ -33,7 +37,7 @@ export function ProductGallery({
           {images.map((src, i) => (
             <button
               key={src}
-              onClick={() => setActiveIndex(i)}
+              onClick={() => (i < sizeCount ? setActiveIndex(i) : setExtraIndex(i))}
               className={clsx(
                 "relative h-20 w-16 shrink-0 overflow-hidden rounded-2xl bg-paper-2 transition-all duration-300 md:h-24 md:w-20",
                 active === i

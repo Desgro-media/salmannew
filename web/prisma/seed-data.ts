@@ -6,6 +6,13 @@ function img(slug: string, n: number) {
 function thumb(slug: string, n: number) {
   return `/products/${slug}/${n}-thumb.jpg`;
 }
+// The lifestyle scene and the notes sheet (scripts/process_lifestyle_images.py).
+// They go AFTER the size photos in images[]: the images[i] <-> sizes[i] pairing
+// only covers the first sizes.length entries, and ProductGallery treats whatever
+// sits past that as an extra that leaves the size selector alone.
+function extras(slug: string) {
+  return [`/products/${slug}/lifestyle.jpg`, `/products/${slug}/notes.jpg`];
+}
 
 export const products: Product[] = [
   {
@@ -26,7 +33,7 @@ export const products: Product[] = [
       heart: ["Bulgarian Rose", "Amber", "Cinnamon"],
       base: ["Oud", "Vanilla", "White Musk"],
     },
-    images: [img("imperial", 1), img("imperial", 2)],
+    images: [img("imperial", 1), img("imperial", 2), ...extras("imperial")],
     signature: true,
     bestseller: true,
     sizes: [
@@ -68,7 +75,7 @@ export const products: Product[] = [
       heart: ["Black Orchid", "Jasmine Sambac", "Ylang-Ylang"],
       base: ["Patchouli", "Sandalwood", "Musk"],
     },
-    images: [img("orchid", 1), img("orchid", 2)],
+    images: [img("orchid", 1), img("orchid", 2), ...extras("orchid")],
     signature: true,
     bestseller: true,
     sizes: [
@@ -152,7 +159,7 @@ export const products: Product[] = [
       heart: ["Oud", "Iris", "Geranium"],
       base: ["Amber", "Sandalwood", "Musk"],
     },
-    images: [img("oud-lavender", 1), img("oud-lavender", 2)],
+    images: [img("oud-lavender", 1), img("oud-lavender", 2), ...extras("oud-lavender")],
     signature: true,
     bestseller: true,
     sizes: [
@@ -194,7 +201,7 @@ export const products: Product[] = [
       heart: ["White Musk", "Lily", "Iris"],
       base: ["Cedarwood", "Ambroxan", "Clean Musk"],
     },
-    images: [img("lather", 1)],
+    images: [img("lather", 1), ...extras("lather")],
     signature: true,
     isNew: true,
     sizes: [
@@ -273,7 +280,7 @@ export const products: Product[] = [
       heart: ["Damask Rose", "Peony", "Jasmine"],
       base: ["Vanilla", "Benzoin", "White Musk"],
     },
-    images: [img("love", 1), img("love", 2)],
+    images: [img("love", 1), img("love", 2), ...extras("love")],
     signature: true,
     isNew: true,
     sizes: [
@@ -315,7 +322,7 @@ export const products: Product[] = [
       heart: ["Lavender", "Violet Leaf", "Juniper"],
       base: ["Ambroxan", "Cedarwood", "Musk"],
     },
-    images: [img("blue", 1), img("blue", 2)],
+    images: [img("blue", 1), img("blue", 2), ...extras("blue")],
     signature: true,
     isNew: true,
     sizes: [
@@ -357,7 +364,7 @@ export const products: Product[] = [
       heart: ["Oud", "Cedarwood", "Guaiac Wood"],
       base: ["Sandalwood", "Amber", "Vanilla"],
     },
-    images: [img("oud", 1), img("oud", 2)],
+    images: [img("oud", 1), img("oud", 2), ...extras("oud")],
     signature: true,
     isNew: true,
     sizes: [
@@ -399,7 +406,7 @@ export const products: Product[] = [
       heart: ["Caramel", "Tonka Bean", "Heliotrope"],
       base: ["Vanilla", "Benzoin", "Amber"],
     },
-    images: [img("sweet", 1)],
+    images: [img("sweet", 1), ...extras("sweet")],
     signature: true,
     isNew: true,
     sizes: [
