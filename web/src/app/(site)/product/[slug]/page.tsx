@@ -76,6 +76,7 @@ export default async function ProductPage({
               images={product.images}
               name={product.fullName}
               accent={product.accent}
+              sizeCount={product.sizes.length}
             />
           </div>
 
