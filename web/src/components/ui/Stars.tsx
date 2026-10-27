@@ -11,13 +11,35 @@ const SIZES = {
 
 export type StarSize = keyof typeof SIZES;
 
-function StarRow({ className, size }: { className?: string; size: StarSize }) {
+function StarRow({
+  className,
+  size,
+  animated,
+}: {
+  className?: string;
+  size: StarSize;
+  animated: boolean;
+}) {
   return (
     // w-max keeps the row at its natural width so the clipped overlay lines up
     // with the track instead of squeezing its stars together.
     <span className={clsx("flex w-max gap-0.5", className)}>
       {[0, 1, 2, 3, 4].map((i) => (
-        <svg key={i} viewBox="0 0 20 20" aria-hidden className={clsx("shrink-0", SIZES[size])}>
+        <svg
+          key={i}
+          viewBox="0 0 20 20"
+          aria-hidden
+          // The star is a circle of radius ~8.4 in a 20-wide box, so the pop's
+          // scale can't push it past the box at any rotation — the gold
+          // overlay's overflow-hidden never clips it. Both rows run the same
+          // delays, which keeps gold and track in step.
+          className={clsx(
+            "shrink-0",
+            SIZES[size],
+            animated && "group-hover/stars:animate-star-pop",
+          )}
+          style={animated ? { animationDelay: `${i * 70}ms` } : undefined}
+        >
           <path d={STAR_PATH} />
         </svg>
       ))}
@@ -28,15 +50,20 @@ function StarRow({ className, size }: { className?: string; size: StarSize }) {
 /**
  * Renders fractional ratings exactly — 4.6 shows 4.6 stars' worth of gold —
  * by clipping a gold row over a muted one rather than rounding to whole stars.
+ *
+ * `animateOnHover` makes the five stars pop in a quick left-to-right wave while
+ * the pointer is over them — only the stars, not whatever sits beside them.
  */
 export function Stars({
   rating,
   size = "sm",
   className,
+  animateOnHover = false,
 }: {
   rating: number;
   size?: StarSize;
   className?: string;
+  animateOnHover?: boolean;
 }) {
   const clamped = Math.min(5, Math.max(0, rating));
 
@@ -44,15 +71,19 @@ export function Stars({
     <span
       role="img"
       aria-label={`${clamped} out of 5 stars`}
-      className={clsx("relative inline-block leading-none", className)}
+      className={clsx(
+        "relative inline-block leading-none",
+        animateOnHover && "group/stars",
+        className,
+      )}
     >
-      <StarRow className="fill-line" size={size} />
+      <StarRow className="fill-line" size={size} animated={animateOnHover} />
       <span
         aria-hidden
         className="absolute inset-y-0 left-0 overflow-hidden"
         style={{ width: `${(clamped / 5) * 100}%` }}
       >
-        <StarRow className="fill-gold-deep" size={size} />
+        <StarRow className="fill-gold-deep" size={size} animated={animateOnHover} />
       </span>
     </span>
   );
