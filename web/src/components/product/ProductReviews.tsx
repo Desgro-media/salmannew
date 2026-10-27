@@ -44,7 +44,7 @@ export async function ProductReviews({
                 {summary.average.toFixed(1)}
               </span>
               <span className="block">
-                <Stars rating={summary.average} size="lg" />
+                <Stars rating={summary.average} size="lg" animateOnHover />
                 <span className="mt-1.5 block text-xs text-ink-soft">
                   {summary.count} {summary.count === 1 ? "review" : "reviews"}
                 </span>
@@ -101,7 +101,7 @@ export async function ProductReviews({
               <li key={review.id} className="py-7 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <Stars rating={review.rating} />
+                    <Stars rating={review.rating} animateOnHover />
                     {review.title && (
                       <h3 className="mt-2.5 text-base font-bold leading-snug">
                         {review.title}

@@ -50,6 +50,7 @@
 
   --animate-marquee: marquee 28s linear infinite;
   --animate-marquee-fast: marquee 14s linear infinite;
+  --animate-star-pop: star-pop 0.55s ease-in-out both;
 
   @keyframes marquee {
     from {
@@ -57,6 +58,19 @@
     }
     to {
       transform: translateX(-50%);
+    }
+  }
+
+  @keyframes star-pop {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+    40% {
+      transform: scale(1.15) rotate(-12deg);
+    }
+    70% {
+      transform: scale(1.07) rotate(6deg);
     }
   }
 }
