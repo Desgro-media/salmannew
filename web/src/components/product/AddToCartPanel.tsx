@@ -103,8 +103,6 @@ export function AddToCartPanel({ product }: { product: Product }) {
           </AnimatePresence>
         </button>
       </div>
-
-      <p className="mt-4 text-xs text-ink-soft">SKU {size.sku}</p>
     </div>
   );
 }
