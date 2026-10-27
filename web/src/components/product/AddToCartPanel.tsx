@@ -104,9 +104,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
         </button>
       </div>
 
-      <p className="mt-4 text-xs text-ink-soft">
-        SKU {size.sku} · Ships in 2–4 business days
-      </p>
+      <p className="mt-4 text-xs text-ink-soft">SKU {size.sku}</p>
     </div>
   );
 }
