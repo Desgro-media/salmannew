@@ -106,7 +106,6 @@ export default async function ProductPage({
                 {product.story}
               </AccordionItem>
               <AccordionItem title="Shipping & Returns">
-                Dispatched in 2–4 business days.{" "}
                 {settings.shippingFee === 0
                   ? "Shipping is free on every order."
                   : `Free shipping on orders over ${formatPrice(settings.freeShippingThreshold)}; ${formatPrice(settings.shippingFee)} below that.`}{" "}
