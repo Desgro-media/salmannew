@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isValidPaymentSignature } from "@/lib/razorpay";
 import { markOrderPaid } from "@/lib/payments";
+import { formatDeliveryDate } from "@/lib/format";
 
 // The success path the customer actually waits on: the checkout modal reports
 // a payment, the browser posts the three fields it was given, and this decides
@@ -53,9 +54,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     orderId: confirmed.orderNumber,
-    estimatedDelivery: confirmed.estimatedDelivery.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-    }),
+    estimatedDelivery: formatDeliveryDate(confirmed.estimatedDelivery),
   });
 }

@@ -379,12 +379,22 @@ Conversion tracking for Meta (Facebook / Instagram) ads. The base snippet is mou
 | `ViewContent` | a product page opens (opening size's SKU + price) | `components/analytics/ViewContent.tsx`, rendered by `product/[slug]/page.tsx` |
 | `AddToCart` | anything is added to the bag | `addItem` in `lib/store/cart.ts` (covers the product page and the shop cards) |
 | `InitiateCheckout` | `/checkout` opens with items in the bag | an effect in `CheckoutForm.tsx` |
-| `AddPaymentInfo` | the Razorpay window opens | `CheckoutForm.handleSubmit` |
-| `Purchase` | the server has verified the payment | the Razorpay `handler` in `CheckoutForm.tsx` |
+| `AddPaymentInfo` | the Razorpay window opens, or a cash-on-delivery order is submitted | `CheckoutForm.handleSubmit` |
+| `Purchase` | the server has verified the payment, or a cash-on-delivery order has been placed | the Razorpay `handler`, and the COD branch of `handleSubmit`, in `CheckoutForm.tsx` |
 
 Conventions: items are identified by **size SKU** on every event; `value` is whole rupees, shipping included on the checkout steps and `Purchase`; `Purchase` takes its value from the gateway's amount (paise ÷ 100), not the on-screen preview, and uses the order number as its event id. Every helper is a no-op when `window.fbq` does not exist, so call sites never check whether tracking is on.
 
 Two things to know when testing: Meta's script silently drops events from headless browsers (user agent `HeadlessChrome`), so an automated check must send a normal one; and it should abort requests to `www.facebook.com/tr`, so test traffic never reaches Meta.
+
+### 9.9 Cash on delivery — `lib/cod.ts`, `POST /api/orders`
+
+A second way to pay, chosen at checkout. Online orders are real once Razorpay confirms the money; a COD order is real the moment it is placed, and the cash arrives at the door.
+
+- **Data.** `Order.paymentMethod` (`ONLINE` | `COD`) and `Order.codFee` (snapshotted, part of `total`). `PaymentStatus` gains **`COD_PENDING`** — "real order, no money yet" — deliberately separate from `PENDING` ("abandoned checkout"). The three settings live on the `StoreSettings` row: `codEnabled`, `codFee` (default 0) and `codMaxOrderValue` (default 5000, **0 = no cap**), edited on `/admin/settings`.
+- **Placing.** `CheckoutForm` shows a Payment choice only when `codAvailability()` allows it, then calls `placeCodOrder()` → `POST /api/orders` with `paymentMethod: "COD"`. The server **re-checks** availability against the current settings (the browser is only a preview), validates a 10–13 digit phone and a 6 digit pincode, writes the order as `COD_PENDING` **with its `RECEIVED` status event in the same transaction**, emails the owner (`notifyOwnerAfterResponse`, worded as "collect ₹X in cash"), and returns `{ orderId, estimatedDelivery, total }`. No Razorpay order is created. The success page reads `?pay=cod&amount=` for display only.
+- **"Is this a real order?"** is `PLACED_ORDER_FILTER` in `lib/payments.ts` (`paymentStatus in PAID, REFUNDED, COD_PENDING`) — one `paymentStatus` clause, not an `OR`, so it can be spread next to a caller's own `OR` (the tracking lookup's ownership check) without replacing it. It feeds the admin and delivery order lists, the account page and order tracking.
+- **Settling the cash.** `codPaymentChange()` runs inside both status routes (`/api/admin/orders/[id]` and `/api/delivery/orders/[id]`): moving a COD order to **DELIVERED** sets `PAID` + `paidAt`; moving it off DELIVERED sets it back to `COD_PENDING`. Online orders are never touched. The delivery order page shows a "Collect ₹X" banner while a COD order is unpaid.
+- **Not covered.** A COD order is not verified by anyone before it ships, so a fake one costs a parcel. The cap, the phone/pincode checks and the admin off switch are the only levers; there is no rate limit on `/api/orders`, no OTP, and no per-pincode serviceability list. A COD order cancelled after delivery is not refunded or reconciled by the app.
 
 ---
 

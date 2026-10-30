@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { PAID_ORDER_FILTER } from "@/lib/payments";
+import { PLACED_ORDER_FILTER } from "@/lib/payments";
 import { OrdersOverview } from "@/components/orders/OrdersOverview";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrdersPage() {
   const [orders, counts, unpaidCount] = await Promise.all([
     prisma.order.findMany({
-      where: PAID_ORDER_FILTER,
+      where: PLACED_ORDER_FILTER,
       orderBy: { createdAt: "desc" },
       include: {
         items: { select: { id: true, name: true, sizeLabel: true, quantity: true } },
@@ -15,7 +15,7 @@ export default async function AdminOrdersPage() {
     }),
     prisma.order.groupBy({
       by: ["status"],
-      where: PAID_ORDER_FILTER,
+      where: PLACED_ORDER_FILTER,
       _count: { _all: true },
     }),
     // Counted but not listed. Abandoned checkouts would swamp the queue, but a

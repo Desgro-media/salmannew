@@ -73,6 +73,16 @@ export interface OrderConfirmation {
 }
 
 /**
+ * A cash-on-delivery order is confirmed the moment it is placed, so unlike an
+ * online order there is no payment step to wait on. `total` is the server's
+ * figure — items, delivery and any COD fee — because that, not the cart's
+ * preview, is what the customer will be asked to hand over.
+ */
+export interface CodOrderConfirmation extends OrderConfirmation {
+  total: number;
+}
+
+/**
  * What the browser needs to open the Razorpay modal. `keyId` is the publishable
  * half of the key pair and is meant to be seen by the client; it is sent in the
  * response rather than inlined as a NEXT_PUBLIC_ build-time variable so that

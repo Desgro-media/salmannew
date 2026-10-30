@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { PAID_ORDER_FILTER } from "@/lib/payments";
+import { PLACED_ORDER_FILTER } from "@/lib/payments";
 import { CUSTOMER_SESSION_COOKIE_NAME, verifyCustomerSessionToken } from "@/lib/customer-auth";
 
 // Lookup is open to guests, because checkout does not require an account — a
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       OR: ownership,
       // An unpaid checkout is not a trackable order, and saying "we couldn't
       // find it" is the truthful answer for one.
-      ...PAID_ORDER_FILTER,
+      ...PLACED_ORDER_FILTER,
     },
     select: {
       orderNumber: true,

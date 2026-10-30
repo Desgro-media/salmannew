@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { calculateShipping } from "@/lib/shipping";
 import { getStoreSettings } from "@/lib/store-settings";
+import { codAvailability } from "@/lib/cod";
+import { formatDeliveryDate, formatPrice } from "@/lib/format";
+import { notifyOwnerAfterResponse } from "@/lib/payments";
 import { orderPayloadSchema } from "@/lib/order-schema";
 import { createRazorpayOrder, razorpayKeyId, toPaise } from "@/lib/razorpay";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
+import type { CustomerDetails } from "@/lib/types";
 
 /**
- * Opens a checkout: writes the order as PENDING and hands the browser what it
- * needs to open the Razorpay modal.
+ * Opens a checkout. Two paths, chosen by `paymentMethod`:
+ *
+ * ONLINE writes the order as PENDING and hands the browser what it needs to open
+ * the Razorpay modal.
  *
  * The order row is created *before* payment on purpose. The webhook identifies
  * an order by its Razorpay order id, so a row has to exist to be found — and a
@@ -20,6 +27,11 @@ import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/
  * Nothing here is customer-visible yet: the RECEIVED checkpoint is raised by
  * markOrderPaid(), so an unpaid order has an empty timeline and cannot be
  * tracked.
+ *
+ * COD has no gateway and nothing to wait for, so the order is real immediately:
+ * it is written as COD_PENDING with its RECEIVED checkpoint in the same
+ * transaction, and the owner is told straight away. The cash arrives at the
+ * door, when the courier marks it delivered (see codPaymentChange).
  */
 export async function POST(request: Request) {
   const json = await request.json();
@@ -32,7 +44,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { items, customer } = parsed.data;
+  const { items, customer, paymentMethod } = parsed.data;
 
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(CUSTOMER_SESSION_COOKIE_NAME)?.value;
@@ -62,11 +74,141 @@ export async function POST(request: Request) {
   // Read here, not taken from the client: the summary the browser rendered may
   // predate an admin changing the rate, and the charge must follow the current
   // setting rather than a stale page.
-  const shipping = calculateShipping(subtotal, await getStoreSettings());
-  const total = subtotal + shipping;
+  const settings = await getStoreSettings();
+  const shipping = calculateShipping(subtotal, settings);
 
   const orderNumber = `SP-${Date.now().toString(36).toUpperCase()}`;
   const estimatedDeliveryDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+  const orderLines = {
+    create: items.map((item) => {
+      const size = sizeById.get(item.sizeId)!;
+      return {
+        productId: size.productId,
+        sizeId: size.id,
+        name: size.product.name,
+        sizeLabel: size.label,
+        price: size.price,
+        image: size.image,
+        quantity: item.quantity,
+        sku: size.sku,
+      };
+    }),
+  };
+
+  /** Everything both payment methods write, so the two paths cannot drift apart. */
+  const sharedOrderData = {
+    orderNumber,
+    subtotal,
+    shipping,
+    customerId: customerSession?.sub,
+    customerFullName: customer.fullName,
+    customerEmail: customer.email,
+    customerPhone: customer.phone,
+    customerAddress: customer.address,
+    customerCity: customer.city,
+    customerState: customer.state,
+    customerPincode: customer.pincode,
+    estimatedDelivery: estimatedDeliveryDate,
+    items: orderLines,
+  } satisfies Omit<Prisma.OrderUncheckedCreateInput, "total">;
+
+  async function saveOrder(data: Prisma.OrderUncheckedCreateInput) {
+    return prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({ data });
+
+      // Keep the account's saved details in sync with the latest checkout, so
+      // it prefills correctly next time.
+      if (customerSession) {
+        await tx.customer.update({
+          where: { id: customerSession.sub },
+          data: {
+            fullName: customer.fullName,
+            phone: customer.phone,
+            address: customer.address,
+            city: customer.city,
+            state: customer.state,
+            pincode: customer.pincode,
+          },
+        });
+      }
+
+      return created;
+    });
+  }
+
+  if (paymentMethod === "COD") {
+    // The browser hides the option when it is unavailable, but that is a
+    // courtesy, not a control — the request can name COD regardless.
+    const availability = codAvailability(subtotal + shipping, settings);
+    if (!availability.available) {
+      return NextResponse.json(
+        {
+          error:
+            availability.reason === "disabled"
+              ? "Cash on delivery isn't available right now. Please pay online."
+              : `Cash on delivery is available on orders up to ${formatPrice(
+                  settings.codMaxOrderValue,
+                )}. Please pay online.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // Nobody has paid anything, so the courier is working from these details
+    // alone. Online checkout lets a sloppy phone number through because the
+    // gateway has already proved the customer is real; here it is the only
+    // thing standing between a parcel and a wrong door.
+    const badContact = invalidCodContact(customer);
+    if (badContact) {
+      return NextResponse.json({ error: badContact }, { status: 400 });
+    }
+
+    const codFee = settings.codFee;
+    const total = subtotal + shipping + codFee;
+
+    const order = await saveOrder({
+      ...sharedOrderData,
+      total,
+      codFee,
+      paymentMethod: "COD",
+      paymentStatus: "COD_PENDING",
+      // The customer's timeline starts here rather than at payment, since
+      // there is no payment to wait for. Written with the order, so a COD order
+      // can never exist without its first checkpoint.
+      statusEvents: { create: { status: "RECEIVED" } },
+    });
+
+    notifyOwnerAfterResponse({
+      orderNumber,
+      paymentMethod: "COD",
+      subtotal,
+      shipping,
+      codFee,
+      total,
+      customerFullName: customer.fullName,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      customerAddress: customer.address,
+      customerCity: customer.city,
+      customerState: customer.state,
+      customerPincode: customer.pincode,
+      items: orderLines.create.map((line) => ({
+        name: line.name,
+        sizeLabel: line.sizeLabel,
+        quantity: line.quantity,
+        price: line.price,
+      })),
+    });
+
+    return NextResponse.json({
+      orderId: order.orderNumber,
+      estimatedDelivery: formatDeliveryDate(order.estimatedDelivery),
+      total,
+    });
+  }
+
+  const total = subtotal + shipping;
 
   // Before the row, so a gateway outage leaves no orphan PENDING order behind.
   let razorpayOrder;
@@ -86,58 +228,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        orderNumber,
-        subtotal,
-        shipping,
-        total,
-        razorpayOrderId: razorpayOrder.id,
-        customerId: customerSession?.sub,
-        customerFullName: customer.fullName,
-        customerEmail: customer.email,
-        customerPhone: customer.phone,
-        customerAddress: customer.address,
-        customerCity: customer.city,
-        customerState: customer.state,
-        customerPincode: customer.pincode,
-        estimatedDelivery: estimatedDeliveryDate,
-        items: {
-          create: items.map((item) => {
-            const size = sizeById.get(item.sizeId)!;
-            return {
-              productId: size.productId,
-              sizeId: size.id,
-              name: size.product.name,
-              sizeLabel: size.label,
-              price: size.price,
-              image: size.image,
-              quantity: item.quantity,
-              sku: size.sku,
-            };
-          }),
-        },
-      },
-    });
-
-    // Keep the account's saved details in sync with the latest checkout, so
-    // it prefills correctly next time.
-    if (customerSession) {
-      await tx.customer.update({
-        where: { id: customerSession.sub },
-        data: {
-          fullName: customer.fullName,
-          phone: customer.phone,
-          address: customer.address,
-          city: customer.city,
-          state: customer.state,
-          pincode: customer.pincode,
-        },
-      });
-    }
-
-    return created;
+  const order = await saveOrder({
+    ...sharedOrderData,
+    total,
+    razorpayOrderId: razorpayOrder.id,
   });
 
   return NextResponse.json({
@@ -154,4 +248,23 @@ export async function POST(request: Request) {
       contact: customer.phone,
     },
   });
+}
+
+/**
+ * The extra checks a COD order gets, as a customer-facing message — or null when
+ * the details are good enough to send a courier to.
+ *
+ * Deliberately loose on the phone (digits only, with room for a +91 prefix and
+ * the spaces and dashes people type) and strict on the pincode, which is always
+ * six digits in India and is what routes the parcel.
+ */
+function invalidCodContact(customer: CustomerDetails): string | null {
+  const phoneDigits = customer.phone.replace(/\D/g, "");
+  if (phoneDigits.length < 10 || phoneDigits.length > 13) {
+    return "Enter a valid phone number — the delivery partner will call it before arriving.";
+  }
+  if (!/^\d{6}$/.test(customer.pincode)) {
+    return "Enter a valid 6-digit pincode so we can deliver to you.";
+  }
+  return null;
 }

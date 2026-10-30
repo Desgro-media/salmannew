@@ -1,19 +1,24 @@
-import type { CheckoutSession, OrderConfirmation, OrderPayload } from "@/lib/types";
+import type {
+  CheckoutSession,
+  CodOrderConfirmation,
+  OrderConfirmation,
+  OrderPayload,
+} from "@/lib/types";
 
-// This is the seam between the frontend and the backend. Checkout is two calls
-// with the Razorpay modal between them, and both live here so the components
-// never talk to the payment API directly.
+// This is the seam between the frontend and the backend. Paying online is two
+// calls with the Razorpay modal between them; cash on delivery is one call and
+// nothing to wait for. All of them live here so the components never talk to
+// the order API directly.
 
-/**
- * Step one: reserve the order and open a payment against it. Returns what the
- * modal needs — notably the amount, which is computed server-side from DB
- * prices and is not the total the cart happens to be showing.
- */
-export async function startCheckout(payload: OrderPayload): Promise<CheckoutSession> {
+async function postOrder<T>(
+  payload: OrderPayload,
+  paymentMethod: "ONLINE" | "COD",
+  fallbackMessage: string,
+): Promise<T> {
   const res = await fetch("/api/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, paymentMethod }),
   });
 
   if (!res.ok) {
@@ -21,10 +26,28 @@ export async function startCheckout(payload: OrderPayload): Promise<CheckoutSess
       .json()
       .then((body: { error?: string }) => body.error)
       .catch(() => null);
-    throw new Error(message ?? "Could not start checkout. Please try again.");
+    throw new Error(message ?? fallbackMessage);
   }
 
   return res.json();
+}
+
+/**
+ * Step one: reserve the order and open a payment against it. Returns what the
+ * modal needs — notably the amount, which is computed server-side from DB
+ * prices and is not the total the cart happens to be showing.
+ */
+export function startCheckout(payload: OrderPayload): Promise<CheckoutSession> {
+  return postOrder(payload, "ONLINE", "Could not start checkout. Please try again.");
+}
+
+/**
+ * Places a cash-on-delivery order. The server both creates and confirms it, so
+ * what comes back is a finished order, not a session to be completed — which is
+ * why the caller may clear the bag as soon as this resolves.
+ */
+export function placeCodOrder(payload: OrderPayload): Promise<CodOrderConfirmation> {
+  return postOrder(payload, "COD", "Could not place your order. Please try again.");
 }
 
 /** The three fields Razorpay's success handler hands back, verbatim. */

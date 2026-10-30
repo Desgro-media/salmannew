@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
-import { ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { ORDER_STATUS_LABEL, OrderStatus } from "@/lib/order-status";
+import { PaymentMethod, PaymentStatus } from "@/lib/payment-status";
 import { OrderStatusControl } from "@/components/admin/OrderStatusControl";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 
@@ -57,6 +58,28 @@ export default async function DeliveryOrderDetailPage({
         <p className="text-2xl font-black">{formatPrice(order.total)}</p>
       </div>
 
+      {/* The one thing a courier must not miss: this parcel is carrying a bill.
+          Shown above the status buttons because marking it Delivered is what
+          records the cash as collected. */}
+      {order.paymentMethod === PaymentMethod.COD &&
+        order.status !== OrderStatus.CANCELLED &&
+        (order.paymentStatus === PaymentStatus.COD_PENDING ? (
+          <div role="note" className="mt-8 border-2 border-ink bg-paper px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-soft">
+              Cash on delivery
+            </p>
+            <p className="mt-1 text-2xl font-black">Collect {formatPrice(order.total)}</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Take the cash at the door, then mark the order Delivered. That records
+              the payment as received.
+            </p>
+          </div>
+        ) : (
+          <div role="note" className="mt-8 border border-line bg-paper-2 px-6 py-4 text-sm">
+            <strong>Cash on delivery</strong> — {formatPrice(order.total)} collected.
+          </div>
+        ))}
+
       <div className="mt-8 border border-line bg-paper-2 px-6 py-6">
         <OrderStatusControl
           orderId={order.id}
@@ -102,6 +125,12 @@ export default async function DeliveryOrderDetailPage({
               <dt className="text-ink-soft">Shipping</dt>
               <dd>{order.shipping === 0 ? "Free" : formatPrice(order.shipping)}</dd>
             </div>
+            {order.codFee > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-ink-soft">Cash on delivery fee</dt>
+                <dd>{formatPrice(order.codFee)}</dd>
+              </div>
+            )}
             <div className="flex justify-between font-bold">
               <dt>Total</dt>
               <dd>{formatPrice(order.total)}</dd>

@@ -1,9 +1,11 @@
 import { sendEmail } from "@/lib/brevo";
 
-export interface PaidOrderSummary {
+export interface NewOrderSummary {
   orderNumber: string;
+  paymentMethod: "ONLINE" | "COD";
   subtotal: number;
   shipping: number;
+  codFee: number;
   total: number;
   customerFullName: string;
   customerEmail: string;
@@ -25,9 +27,12 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Tells the store owner a real order came in. Called from markOrderPaid(),
- * only on the transition into PAID — never for a PENDING checkout someone
- * abandoned or a payment that failed.
+ * Tells the store owner a real order came in. Called from markOrderPaid() on
+ * the transition into PAID, and when a cash-on-delivery order is placed —
+ * never for a PENDING checkout someone abandoned or a payment that failed.
+ *
+ * A COD order is worded differently on purpose: nothing has been paid yet, and
+ * the owner needs to see at a glance that the courier must collect the cash.
  *
  * Best-effort: a Brevo outage or an unset API key must never fail the payment
  * confirmation the customer is waiting on, so every failure here is caught and
@@ -37,8 +42,9 @@ function escapeHtml(value: string): string {
  * tied to whoever holds the SUPERADMIN admin-dashboard login, so changing one
  * never silently changes the other.
  */
-export async function notifyOwnerOfPaidOrder(order: PaidOrderSummary): Promise<void> {
+export async function notifyOwnerOfNewOrder(order: NewOrderSummary): Promise<void> {
   const recipient = process.env.ORDER_NOTIFY_EMAIL;
+  const isCod = order.paymentMethod === "COD";
 
   if (!recipient) {
     console.error("[email] ORDER_NOTIFY_EMAIL is not set, skipping order notification for", order.orderNumber);
@@ -58,12 +64,21 @@ export async function notifyOwnerOfPaidOrder(order: PaidOrderSummary): Promise<v
   const html = `
     <div style="font-family:sans-serif;font-size:14px;color:#1a1a1a;">
       <h2 style="margin:0 0 4px;">New order — ${escapeHtml(order.orderNumber)}</h2>
-      <p style="margin:0 0 16px;">${escapeHtml(order.customerFullName)} just paid <strong>₹${order.total}</strong>.</p>
+      <p style="margin:0 0 16px;">${
+        isCod
+          ? `${escapeHtml(order.customerFullName)} placed a <strong>cash on delivery</strong> order. <strong>Collect ₹${order.total} in cash</strong> when it is delivered.`
+          : `${escapeHtml(order.customerFullName)} just paid <strong>₹${order.total}</strong>.`
+      }</p>
 
       <table style="border-collapse:collapse;width:100%;max-width:420px;">
         ${itemRows}
         <tr><td style="padding:8px 12px 0 0;">Subtotal</td><td style="padding:8px 0 0;text-align:right;">₹${order.subtotal}</td></tr>
-        <tr><td style="padding:2px 12px 0 0;">Shipping</td><td style="padding:2px 0 0;text-align:right;">₹${order.shipping}</td></tr>
+        <tr><td style="padding:2px 12px 0 0;">Shipping</td><td style="padding:2px 0 0;text-align:right;">₹${order.shipping}</td></tr>${
+          order.codFee > 0
+            ? `
+        <tr><td style="padding:2px 12px 0 0;">Cash on delivery fee</td><td style="padding:2px 0 0;text-align:right;">₹${order.codFee}</td></tr>`
+            : ""
+        }
         <tr><td style="padding:4px 12px 0 0;font-weight:bold;">Total</td><td style="padding:4px 0 0;text-align:right;font-weight:bold;">₹${order.total}</td></tr>
       </table>
 
@@ -79,7 +94,7 @@ export async function notifyOwnerOfPaidOrder(order: PaidOrderSummary): Promise<v
 
   await sendEmail({
     to: [{ email: recipient }],
-    subject: `New order ${order.orderNumber} — ₹${order.total}`,
+    subject: `New order ${order.orderNumber} — ₹${order.total}${isCod ? " (cash on delivery)" : ""}`,
     html,
   });
 }

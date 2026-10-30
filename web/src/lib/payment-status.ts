@@ -1,6 +1,10 @@
-import type { PaymentStatus as PrismaPaymentStatus } from "@prisma/client";
+import type {
+  PaymentMethod as PrismaPaymentMethod,
+  PaymentStatus as PrismaPaymentStatus,
+} from "@prisma/client";
 
 export type PaymentStatus = PrismaPaymentStatus;
+export type PaymentMethod = PrismaPaymentMethod;
 
 /**
  * Mirrors Prisma's PaymentStatus as plain strings, for the same reason
@@ -16,6 +20,7 @@ export const PaymentStatus = {
   PAID: "PAID",
   FAILED: "FAILED",
   REFUNDED: "REFUNDED",
+  COD_PENDING: "COD_PENDING",
 } as const satisfies Record<PrismaPaymentStatus, PrismaPaymentStatus>;
 
 /** Admin-facing wording — says what happened to the money, not to the parcel. */
@@ -24,4 +29,15 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   PAID: "Paid",
   FAILED: "Payment failed",
   REFUNDED: "Refunded",
+  COD_PENDING: "Cash due on delivery",
+};
+
+export const PaymentMethod = {
+  ONLINE: "ONLINE",
+  COD: "COD",
+} as const satisfies Record<PrismaPaymentMethod, PrismaPaymentMethod>;
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  ONLINE: "Online (Razorpay)",
+  COD: "Cash on delivery",
 };

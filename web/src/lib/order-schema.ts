@@ -25,4 +25,7 @@ export const orderPayloadSchema = z.object({
   items: z.array(cartLineSchema).min(1),
   customer: customerDetailsSchema,
   subtotal: z.number(),
+  // Defaults to ONLINE so a browser still running the checkout bundle from
+  // before COD existed keeps working through a deploy.
+  paymentMethod: z.enum(["ONLINE", "COD"]).default("ONLINE"),
 });
