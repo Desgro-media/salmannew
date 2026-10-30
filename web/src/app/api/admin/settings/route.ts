@@ -13,6 +13,10 @@ const settingsSchema = z.object({
   // the live storefront.
   shippingFee: z.number().int().min(0).max(10_000),
   freeShippingThreshold: z.number().int().min(0).max(1_000_000),
+  codEnabled: z.boolean(),
+  codFee: z.number().int().min(0).max(10_000),
+  // 0 means no cap.
+  codMaxOrderValue: z.number().int().min(0).max(1_000_000),
 });
 
 export async function PUT(request: Request) {
@@ -20,7 +24,7 @@ export async function PUT(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Enter a whole number of rupees for both fields." },
+      { error: "Enter a whole number of rupees in every amount field." },
       { status: 400 },
     );
   }
@@ -42,5 +46,8 @@ export async function PUT(request: Request) {
   return NextResponse.json({
     shippingFee: settings.shippingFee,
     freeShippingThreshold: settings.freeShippingThreshold,
+    codEnabled: settings.codEnabled,
+    codFee: settings.codFee,
+    codMaxOrderValue: settings.codMaxOrderValue,
   });
 }

@@ -5,9 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
+import { clsx } from "clsx";
 import { useCart, cartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
-import { confirmPayment, startCheckout } from "@/lib/orders";
+import { confirmPayment, placeCodOrder, startCheckout } from "@/lib/orders";
 import {
   trackAddPaymentInfo,
   trackInitiateCheckout,
@@ -15,9 +16,12 @@ import {
 } from "@/lib/meta-pixel";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import { calculateShipping, type ShippingSettings } from "@/lib/shipping";
+import { codAvailability, type CodSettings } from "@/lib/cod";
 import type { CustomerDetails } from "@/lib/types";
 
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+
+type PaymentChoice = "ONLINE" | "COD";
 
 const FIELDS: { name: keyof CustomerDetails; label: string; type?: string; span?: 1 | 2 }[] = [
   { name: "fullName", label: "Full name", span: 2 },
@@ -33,7 +37,7 @@ const FIELDS: { name: keyof CustomerDetails; label: string; type?: string; span?
 // this is a Client Component, and importing the Prisma-backed accessor would
 // pull the database client into the browser bundle. The figure shown is only a
 // preview either way — /api/orders recomputes the charge server-side.
-export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
+export function CheckoutForm({ settings }: { settings: ShippingSettings & CodSettings }) {
   const mounted = useHasMounted();
   const router = useRouter();
   const items = useCart((s) => s.items);
@@ -41,6 +45,8 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gatewayReady, setGatewayReady] = useState(false);
+  const [gatewayFailed, setGatewayFailed] = useState(false);
+  const [choice, setChoice] = useState<PaymentChoice>("ONLINE");
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const initiatedCheckout = useRef(false);
   const [customer, setCustomer] = useState<CustomerDetails>({
@@ -66,7 +72,18 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
 
   const subtotal = mounted ? cartSubtotal(items) : 0;
   const shipping = calculateShipping(subtotal, settings);
-  const total = subtotal + shipping;
+  // Items plus delivery: what the bag is worth before anyone picks how to pay.
+  const orderValue = subtotal + shipping;
+
+  // Whether COD is on the table for this bag. Recomputed as the bag changes, so
+  // a customer who adds items past the cap loses the option rather than finding
+  // out when the server refuses it.
+  const cod = codAvailability(orderValue, settings);
+  // A selection that has stopped being offered quietly reverts to online instead
+  // of leaving a COD choice nobody can see.
+  const method: PaymentChoice = choice === "COD" && cod.available ? "COD" : "ONLINE";
+  const codFee = method === "COD" ? settings.codFee : 0;
+  const total = orderValue + codFee;
 
   // Once per visit to this page, and only for a bag with something in it — the
   // empty-bag screen below is not a checkout. Waits on `mounted` because the
@@ -74,8 +91,8 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
   useEffect(() => {
     if (!mounted || items.length === 0 || initiatedCheckout.current) return;
     initiatedCheckout.current = true;
-    trackInitiateCheckout(items, total);
-  }, [mounted, items, total]);
+    trackInitiateCheckout(items, orderValue);
+  }, [mounted, items, orderValue]);
 
   /**
    * Checkout runs in three acts: reserve the order, let Razorpay collect the
@@ -91,6 +108,29 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+
+    // Cash on delivery skips all of that: one call places a finished order, so
+    // there is no modal to keep `submitting` true behind. It stays true only
+    // until the request settles, which is what stops a double-tap placing two.
+    if (method === "COD") {
+      trackAddPaymentInfo(items, total);
+      try {
+        const order = await placeCodOrder({ items, customer, subtotal });
+        // The server's total, not the preview: it is the figure that includes
+        // whatever COD fee was in force when the order was placed.
+        trackPurchase(items, order.total, order.orderId);
+        clear();
+        router.push(
+          `/checkout/success?order=${order.orderId}&eta=${encodeURIComponent(
+            order.estimatedDelivery,
+          )}&pay=cod&amount=${order.total}`,
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not place your order.");
+        setSubmitting(false);
+      }
+      return;
+    }
 
     if (!window.Razorpay) {
       setError("The payment window could not load. Check your connection and try again.");
@@ -191,9 +231,10 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
       <Script
         src={RAZORPAY_CHECKOUT_SRC}
         onReady={() => setGatewayReady(true)}
-        onError={() =>
-          setError("The payment window could not load. Check your connection and try again.")
-        }
+        // Its own flag rather than `error`: an ad-blocker can stop this script,
+        // and that must only warn someone who is trying to pay online — cash
+        // on delivery does not need the gateway at all.
+        onError={() => setGatewayFailed(true)}
       />
 
       <div className="md:col-span-7">
@@ -236,17 +277,72 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
           ))}
         </div>
 
+        {/* Only shown when there is a real choice. With COD switched off, or the
+            bag over its cap, "Pay online" would be a one-item radio group, so
+            the old layout is kept — and a bag over the cap says why COD is
+            missing rather than leaving them to wonder where it went. */}
+        {cod.available ? (
+          <fieldset className="mt-8">
+            <legend className="eyebrow text-ink-soft">Payment</legend>
+            <div className="mt-5 grid grid-cols-1 gap-3">
+              <PaymentOption
+                value="ONLINE"
+                selected={method === "ONLINE"}
+                onSelect={setChoice}
+                title="Pay online"
+                description="UPI, cards, netbanking & wallets, secured by Razorpay."
+              />
+              <PaymentOption
+                value="COD"
+                selected={method === "COD"}
+                onSelect={setChoice}
+                title="Cash on delivery"
+                description={
+                  settings.codFee > 0
+                    ? `Pay in cash when your order arrives. A ${formatPrice(settings.codFee)} handling fee applies.`
+                    : "Pay in cash when your order arrives."
+                }
+              />
+            </div>
+          </fieldset>
+        ) : (
+          cod.reason === "over-limit" && (
+            <p className="mt-8 text-xs text-ink-soft">
+              Cash on delivery is available on orders up to{" "}
+              {formatPrice(settings.codMaxOrderValue)}.
+            </p>
+          )
+        )}
+
         {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+        {method === "ONLINE" && gatewayFailed && !error && (
+          <p className="mt-4 text-sm text-red-700">
+            The payment window could not load. Check your connection and try again.
+          </p>
+        )}
 
         <button
           type="submit"
-          disabled={submitting || !mounted || !gatewayReady || items.length === 0}
+          disabled={
+            submitting ||
+            !mounted ||
+            (method === "ONLINE" && !gatewayReady) ||
+            items.length === 0
+          }
           className="mt-8 w-full bg-ink px-7 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-paper transition-colors hover:bg-gold hover:text-ink disabled:opacity-40 sm:w-auto sm:px-14"
         >
-          {submitting ? "Opening Payment…" : `Pay ${formatPrice(total)}`}
+          {method === "COD"
+            ? submitting
+              ? "Placing Order…"
+              : `Place Order · ${formatPrice(total)}`
+            : submitting
+              ? "Opening Payment…"
+              : `Pay ${formatPrice(total)}`}
         </button>
         <p className="mt-3 text-xs text-ink-soft">
-          Secure payment by Razorpay · UPI, cards, netbanking &amp; wallets.
+          {method === "COD"
+            ? `Pay ${formatPrice(total)} in cash to the delivery partner. They will call you before arriving.`
+            : "Secure payment by Razorpay · UPI, cards, netbanking & wallets."}
         </p>
       </div>
 
@@ -287,6 +383,12 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
             <span className="text-ink-soft">Shipping</span>
             <span>{shipping === 0 ? "Free" : formatPrice(shipping)}</span>
           </div>
+          {codFee > 0 && (
+            <div className="flex justify-between">
+              <span className="text-ink-soft">Cash on delivery fee</span>
+              <span>{formatPrice(codFee)}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-line pt-2 text-base font-bold">
             <span>Total</span>
             <span>{formatPrice(total)}</span>
@@ -294,5 +396,41 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings }) {
         </div>
       </div>
     </form>
+  );
+}
+
+function PaymentOption({
+  value,
+  selected,
+  onSelect,
+  title,
+  description,
+}: {
+  value: PaymentChoice;
+  selected: boolean;
+  onSelect: (value: PaymentChoice) => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label
+      className={clsx(
+        "flex min-h-11 cursor-pointer items-start gap-3 border px-4 py-3.5 transition-colors",
+        selected ? "border-ink" : "border-line hover:border-ink-soft",
+      )}
+    >
+      <input
+        type="radio"
+        name="payment"
+        value={value}
+        checked={selected}
+        onChange={() => onSelect(value)}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-ink)]"
+      />
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="mt-0.5 block text-xs text-ink-soft">{description}</span>
+      </span>
+    </label>
   );
 }

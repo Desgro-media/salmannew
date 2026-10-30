@@ -2,6 +2,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { formatPrice } from "@/lib/format";
 import { ALL_ORDER_STATUSES, ORDER_STATUS_LABEL, OrderStatus } from "@/lib/order-status";
+import { PaymentMethod, PaymentStatus } from "@/lib/payment-status";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
@@ -13,6 +14,8 @@ export interface OrderListRow {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   total: number;
   createdAt: Date;
   customerFullName: string;
@@ -93,6 +96,13 @@ export function OrdersOverview({
                     >
                       {ORDER_STATUS_LABEL[order.status]}
                     </span>
+                    {order.paymentMethod === PaymentMethod.COD && (
+                      <span className="rounded-full border border-ink px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em]">
+                        {order.paymentStatus === PaymentStatus.COD_PENDING
+                          ? "COD · cash due"
+                          : "COD"}
+                      </span>
+                    )}
                   </div>
                   {/* long addresses have to wrap rather than widen the row */}
                   <p className="mt-1.5 break-words text-sm">

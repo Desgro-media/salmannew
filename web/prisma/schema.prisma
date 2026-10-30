@@ -37,6 +37,13 @@ model StoreSettings {
   // by the marquee/product-page copy alike, so the advertised figure and the
   // charged one cannot drift apart.
   freeShippingThreshold Int      @default(2999)
+  // Cash on delivery. `codEnabled` is the store-wide off switch; `codFee` is an
+  // extra charge on COD orders only (0 = none); `codMaxOrderValue` caps the
+  // order value COD is offered on, with 0 meaning no cap. All read by checkout
+  // for the preview and again by /api/orders for the charge.
+  codEnabled            Boolean  @default(true)
+  codFee                Int      @default(0)
+  codMaxOrderValue      Int      @default(5000)
   updatedAt             DateTime @updatedAt
 }
 
@@ -163,11 +170,25 @@ enum OrderStatus {
 // PENDING is the state every order is born in — the row exists so the Razorpay
 // order has something to point back at, but nobody has paid yet. Those rows are
 // abandoned carts, not orders, and are kept out of the fulfilment queue.
+//
+// COD_PENDING is the cash-on-delivery counterpart of PENDING, and is kept apart
+// from it on purpose: PENDING means "abandoned checkout, not an order", while a
+// COD order is real from the moment it is placed and simply has no money yet.
+// Reusing PENDING would have made every "is this a real order" query need to
+// know about the payment method as well. The delivery handover moves it to PAID.
 enum PaymentStatus {
   PENDING
   PAID
   FAILED
   REFUNDED
+  COD_PENDING
+}
+
+// How the customer chose to pay. Recorded separately from PaymentStatus so a COD
+// order that has been delivered (PAID) still says it was settled in cash.
+enum PaymentMethod {
+  ONLINE
+  COD
 }
 
 model Order {
@@ -175,8 +196,12 @@ model Order {
   orderNumber       String             @unique
   status            OrderStatus        @default(RECEIVED)
   paymentStatus     PaymentStatus      @default(PENDING)
+  paymentMethod     PaymentMethod      @default(ONLINE)
   subtotal          Int
   shipping          Int                @default(0)
+  // The cash-on-delivery handling charge, snapshotted like `shipping` so a later
+  // change to the setting cannot rewrite what an old order cost. Part of `total`.
+  codFee            Int                @default(0)
   total             Int
   // Razorpay's own order id (`order_...`), created before the customer is sent
   // to the gateway. Unique because it is what the webhook matches on, and two

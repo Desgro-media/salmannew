@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
-import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status";
+import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/payment-status";
 import { OrderStatusControl } from "@/components/admin/OrderStatusControl";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 
@@ -102,6 +102,12 @@ export default async function AdminOrderDetailPage({
               <dt className="text-ink-soft">Shipping</dt>
               <dd>{order.shipping === 0 ? "Free" : formatPrice(order.shipping)}</dd>
             </div>
+            {order.codFee > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-ink-soft">Cash on delivery fee</dt>
+                <dd>{formatPrice(order.codFee)}</dd>
+              </div>
+            )}
             <div className="flex justify-between font-bold">
               <dt>Total</dt>
               <dd>{formatPrice(order.total)}</dd>
@@ -113,6 +119,10 @@ export default async function AdminOrderDetailPage({
               searched by. */}
           <p className="eyebrow mt-8 text-ink-soft">Payment</p>
           <dl className="mt-3 space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-soft">Method</dt>
+              <dd className="font-semibold">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</dd>
+            </div>
             <div className="flex justify-between gap-4">
               <dt className="text-ink-soft">Status</dt>
               <dd className="font-semibold">

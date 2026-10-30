@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { ALL_ORDER_STATUSES, isRedundantChange } from "@/lib/order-status";
+import { codPaymentChange } from "@/lib/cod";
 
 // Access is enforced by proxy.ts, which guards /api/admin/:path* — same as the
 // other admin routes. The session is re-read here only to attribute the change
@@ -33,7 +34,7 @@ export async function PATCH(
 
   const order = await prisma.order.findUnique({
     where: { id },
-    select: { id: true, status: true },
+    select: { id: true, status: true, paymentMethod: true, paymentStatus: true },
   });
   if (!order) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
@@ -54,8 +55,10 @@ export async function PATCH(
 
   // The order's current stage and its history have to move together, or a
   // failure between them would leave a timeline that disagrees with the badge.
+  // For a cash-on-delivery order the same write also settles (or un-settles) the
+  // payment, because delivery is the moment the cash changes hands.
   await prisma.$transaction([
-    prisma.order.update({ where: { id }, data: { status } }),
+    prisma.order.update({ where: { id }, data: { status, ...codPaymentChange(order, status) } }),
     prisma.orderStatusEvent.create({
       data: {
         orderId: id,
