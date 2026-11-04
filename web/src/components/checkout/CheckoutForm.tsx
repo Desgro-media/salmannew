@@ -15,6 +15,7 @@ import {
   trackPurchase,
 } from "@/lib/meta-pixel";
 import { useHasMounted } from "@/lib/use-has-mounted";
+import { StrikePrice } from "@/components/product/StrikePrice";
 import { calculateShipping, type ShippingSettings } from "@/lib/shipping";
 import { codAvailability, type CodSettings } from "@/lib/cod";
 import type { CustomerDetails } from "@/lib/types";
@@ -367,9 +368,18 @@ export function CheckoutForm({ settings }: { settings: ShippingSettings & CodSet
                 <p className="text-sm font-semibold">{item.name}</p>
                 <p className="text-xs text-ink-soft">{item.sizeLabel}</p>
               </div>
-              <p className="self-center text-sm font-semibold">
-                {formatPrice(item.price * item.quantity)}
-              </p>
+              <div className="flex flex-col items-end self-center">
+                <p className="text-sm font-semibold">
+                  {formatPrice(item.price * item.quantity)}
+                </p>
+                <StrikePrice
+                  price={item.price * item.quantity}
+                  compareAtPrice={
+                    item.compareAtPrice != null ? item.compareAtPrice * item.quantity : undefined
+                  }
+                  className="text-xs"
+                />
+              </div>
             </li>
           ))}
         </ul>

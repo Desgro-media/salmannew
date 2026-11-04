@@ -7,6 +7,7 @@ import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { useCart } from "@/lib/store/cart";
 import { useProductSelection } from "@/lib/product-selection-context";
+import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
 
 export function AddToCartPanel({ product }: { product: Product }) {
   const { activeIndex, setActiveIndex } = useProductSelection();
@@ -24,6 +25,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
         name: product.name,
         sizeLabel: size.label,
         price: size.price,
+        compareAtPrice: size.compareAtPrice,
         image: size.image,
         sku: size.sku,
       },
@@ -36,12 +38,30 @@ export function AddToCartPanel({ product }: { product: Product }) {
   return (
     <div>
       <div className="flex items-baseline gap-3">
-        <span className="text-2xl font-bold">{formatPrice(size.price)}</span>
-        {size.compareAtPrice != null && size.compareAtPrice > size.price && (
-          <span className="text-base text-ink-soft line-through">
-            {formatPrice(size.compareAtPrice)}
-          </span>
-        )}
+        {/* The new price pops once as the strike lands, but only on a size that
+            is actually discounted — a plain price has nothing to react to.
+            Keyed on the size so it replays when the size changes, in step with
+            the strike. origin-left so it grows away from the number, not into
+            the crossed-out price beside it. */}
+        <span
+          key={`price-${size.id}`}
+          className={clsx(
+            "text-2xl font-bold",
+            isOnSale(size.price, size.compareAtPrice) &&
+              "origin-left animate-price-land motion-reduce:animate-none",
+          )}
+        >
+          {formatPrice(size.price)}
+        </span>
+        {/* Keyed on the size so picking the other bottle remounts it and the
+            strike is drawn again, rather than the old line sitting there. */}
+        <StrikePrice
+          key={`strike-${size.id}`}
+          price={size.price}
+          compareAtPrice={size.compareAtPrice}
+          animate
+          className="text-base"
+        />
       </div>
 
       <div className="mt-6">

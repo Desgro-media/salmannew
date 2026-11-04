@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCart, cartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
 import { useHasMounted } from "@/lib/use-has-mounted";
+import { StrikePrice } from "@/components/product/StrikePrice";
 
 export function CartDrawer() {
   const mounted = useHasMounted();
@@ -83,9 +84,20 @@ export function CartDrawer() {
                             <p className="text-sm font-semibold">{item.name}</p>
                             <p className="text-xs text-ink-soft">{item.sizeLabel}</p>
                           </div>
-                          <p className="text-sm font-semibold whitespace-nowrap">
-                            {formatPrice(item.price * item.quantity)}
-                          </p>
+                          <div className="flex flex-col items-end">
+                            <p className="text-sm font-semibold whitespace-nowrap">
+                              {formatPrice(item.price * item.quantity)}
+                            </p>
+                            <StrikePrice
+                              price={item.price * item.quantity}
+                              compareAtPrice={
+                                item.compareAtPrice != null
+                                  ? item.compareAtPrice * item.quantity
+                                  : undefined
+                              }
+                              className="text-xs"
+                            />
+                          </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex items-center border border-line">

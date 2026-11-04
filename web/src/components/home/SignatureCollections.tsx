@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
 import { cutoutSrc } from "@/lib/product-image";
 import { wellSurface } from "@/lib/product-well";
+import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
 
 export async function SignatureCollections() {
   const products = await getAllProducts();
@@ -34,7 +35,7 @@ export async function SignatureCollections() {
         <HorizontalScroller>
           {products.map((product, i) => {
             const cheapest = [...product.sizes].sort((a, b) => a.price - b.price)[0];
-            const onSale = cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price;
+            const onSale = isOnSale(cheapest.price, cheapest.compareAtPrice);
 
             return (
               <Reveal key={product.id} delay={(i % 3) * 0.06} className="w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
@@ -68,11 +69,11 @@ export async function SignatureCollections() {
                     <h3 className="mt-4 font-bold">{product.name}</h3>
                     <p className="mt-1 text-sm">
                       <span className="font-semibold">From {formatPrice(cheapest.price)}</span>
-                      {cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price && (
-                        <span className="ml-2 text-ink-soft line-through">
-                          {formatPrice(cheapest.compareAtPrice)}
-                        </span>
-                      )}
+                      <StrikePrice
+                        price={cheapest.price}
+                        compareAtPrice={cheapest.compareAtPrice}
+                        className="ml-2"
+                      />
                     </p>
                   </Link>
 

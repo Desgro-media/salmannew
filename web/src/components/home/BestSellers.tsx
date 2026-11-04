@@ -6,6 +6,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
 import { cutoutSrc } from "@/lib/product-image";
 import { wellSurface } from "@/lib/product-well";
+import { StrikePrice } from "@/components/product/StrikePrice";
 
 export async function BestSellers() {
   const products = await getAllProducts();
@@ -60,11 +61,11 @@ export async function BestSellers() {
                   <h3 className="mt-4 font-bold">{product.name}</h3>
                   <p className="mt-1 text-sm">
                     <span className="font-semibold">From {formatPrice(cheapest.price)}</span>
-                    {cheapest.compareAtPrice != null && cheapest.compareAtPrice > cheapest.price && (
-                      <span className="ml-2 text-ink-soft line-through">
-                        {formatPrice(cheapest.compareAtPrice)}
-                      </span>
-                    )}
+                    <StrikePrice
+                      price={cheapest.price}
+                      compareAtPrice={cheapest.compareAtPrice}
+                      className="ml-2"
+                    />
                   </p>
                   <span className="mt-auto inline-block pt-1 text-xs text-ink-soft underline underline-offset-2 group-hover:text-ink">
                     Learn more
