@@ -9,6 +9,7 @@ import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { cutoutSrc } from "@/lib/product-image";
 import { wellSurface } from "@/lib/product-well";
+import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
 import { categoryLabel } from "@/lib/shop-filters";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
@@ -38,6 +39,7 @@ export function ProductCard({ product }: { product: Product }) {
       name: product.name,
       sizeLabel: size.label,
       price: size.price,
+      compareAtPrice: size.compareAtPrice,
       image: size.image,
       sku: size.sku,
     });
@@ -147,7 +149,28 @@ export function ProductCard({ product }: { product: Product }) {
             <p className="mt-2 text-[11px] font-semibold text-ink-soft">{size.label}</p>
           )}
 
-          <p className="mt-2 text-lg font-bold">{formatPrice(size.price)}</p>
+          {/* Wraps rather than overflows: on a two-column phone grid the tile is
+              narrow, and the add button takes a slice of it. */}
+          <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
+            {/* Pops once when a discounted price appears — as the card first
+                shows, and again each time a discounted size is picked. Keyed on
+                the size so the pick replays it; a plain price does not pop. */}
+            <span
+              key={`price-${size.id}`}
+              className={clsx(
+                "text-lg font-bold",
+                isOnSale(size.price, size.compareAtPrice) &&
+                  "origin-left animate-price-pop motion-reduce:animate-none",
+              )}
+            >
+              {formatPrice(size.price)}
+            </span>
+            <StrikePrice
+              price={size.price}
+              compareAtPrice={size.compareAtPrice}
+              className="text-sm"
+            />
+          </p>
         </div>
 
         <button

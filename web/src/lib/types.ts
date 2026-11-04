@@ -46,6 +46,13 @@ export interface CartLine {
   name: string;
   sizeLabel: string;
   price: number;
+  /**
+   * The original, crossed-out price, kept only so the bag and checkout can show
+   * the saving the product page promised. Display only: the server prices an
+   * order from its own catalogue and its schema drops this field. Carts saved
+   * before it existed simply lack it, and show no strike.
+   */
+  compareAtPrice?: number;
   image: string;
   quantity: number;
   sku: string;
