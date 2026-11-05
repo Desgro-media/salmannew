@@ -54,6 +54,20 @@ export async function getAllProducts(): Promise<Product[]> {
   return rows.map(toProduct);
 }
 
+// The homepage rows (Best Sellers, Signature Collections) lead with whatever was
+// added last, so a new scent shows up at the front instead of past the scroll.
+// getAllProducts stays oldest-first for everything else — the footer, shop and
+// about page lean on that order. id breaks ties: cuids sort by creation time,
+// and rows seeded in one batch can share a createdAt.
+export async function getProductsNewestFirst(): Promise<Product[]> {
+  const rows = await prisma.product.findMany({
+    where: { isArchived: false },
+    include: productWithSizes.include,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+  return rows.map(toProduct);
+}
+
 export async function getProductBySlug(slug: string): Promise<Product | undefined> {
   const row = await prisma.product.findUnique({
     where: { slug },
