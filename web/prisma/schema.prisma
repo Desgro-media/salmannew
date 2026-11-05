@@ -275,6 +275,16 @@ model Order {
   customerState     String
   customerPincode   String
   estimatedDelivery DateTime
+  // What Meta's Conversions API wants to know about the browser that placed the
+  // order. Captured at checkout, not when the Purchase is sent, because the
+  // Razorpay webhook can be the one that settles an order and it has no browser
+  // to read these from. Only written while the Conversions API is configured,
+  // and cleared once the Purchase has been reported.
+  metaFbp           String?
+  metaFbc           String?
+  clientIp          String?
+  clientUserAgent   String?
+  checkoutUrl       String?
   items             OrderItem[]
   statusEvents      OrderStatusEvent[]
   createdAt         DateTime           @default(now())
