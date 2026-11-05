@@ -3,6 +3,12 @@ import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@/lib/order-status";
 import { notifyOwnerOfNewOrder, type NewOrderSummary } from "@/lib/notify-owner";
+import {
+  buildPurchaseEvent,
+  metaCapiConfig,
+  sendPurchaseEvent,
+  type MetaCapiConfig,
+} from "@/lib/meta-capi";
 
 /**
  * What counts as a real order: one the customer has actually committed to,
@@ -43,9 +49,9 @@ export const PLACED_ORDER_FILTER = {
  * this as a conditional update rather than read-then-write also closes the race
  * where both arrive at once and each sees PENDING.
  *
- * That same `count > 0` check is also what gates the owner's new-order email —
- * it fires exactly once per order, on whichever caller wins the race, never on
- * the loser.
+ * That same `count > 0` check is also what gates the owner's new-order email and
+ * the Purchase sent to Meta — each fires exactly once per order, on whichever
+ * caller wins the race, never on the loser.
  */
 export async function markOrderPaid(input: {
   razorpayOrderId: string;
@@ -99,7 +105,10 @@ export async function markOrderPaid(input: {
 
   if (!result) return null;
 
-  if (result.justPaid) notifyOwnerAfterResponse(result.order);
+  if (result.justPaid) {
+    notifyOwnerAfterResponse(result.order);
+    reportPurchaseAfterResponse(result.order.id);
+  }
 
   return { orderNumber: result.order.orderNumber, estimatedDelivery: result.order.estimatedDelivery };
 }
@@ -119,6 +128,75 @@ export function notifyOwnerAfterResponse(order: NewOrderSummary): void {
       console.error("[email] failed to notify owner of order", order.orderNumber, error);
     }),
   );
+}
+
+/**
+ * Reports a real order to Meta's Conversions API once the response has gone out,
+ * for the same reason the owner's email waits: Meta being slow must never be
+ * what holds up a customer's confirmation, or Razorpay's webhook.
+ *
+ * Shared by the same two doors as the email — a verified online payment and a
+ * placed COD order — and a no-op until META_CAPI_ACCESS_TOKEN is set. A failure
+ * is logged and goes no further: the browser's own Purchase is already on its
+ * way, and a customer's order must never fail because an ad platform did.
+ */
+export function reportPurchaseAfterResponse(orderId: string): void {
+  const config = metaCapiConfig();
+  if (!config) return;
+
+  after(() =>
+    reportPurchase(orderId, config).catch((error) => {
+      console.error("[meta-capi] failed to report purchase", orderId, error);
+    }),
+  );
+}
+
+async function reportPurchase(orderId: string, config: MetaCapiConfig): Promise<void> {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      orderNumber: true,
+      total: true,
+      customerId: true,
+      customerFullName: true,
+      customerEmail: true,
+      customerPhone: true,
+      customerCity: true,
+      customerState: true,
+      customerPincode: true,
+      metaFbp: true,
+      metaFbc: true,
+      clientIp: true,
+      clientUserAgent: true,
+      checkoutUrl: true,
+      items: { select: { sku: true, quantity: true, price: true } },
+    },
+  });
+  if (!order) return;
+
+  const event = buildPurchaseEvent(order);
+  if (!event) {
+    // Opened before browser details were being kept, so there is nothing to
+    // send as a website event. Not an error worth a stack trace.
+    console.warn("[meta-capi] no browser details, purchase not reported", order.orderNumber);
+    return;
+  }
+
+  await sendPurchaseEvent(config, event);
+
+  // Reported, so the browser details have done their job. They include an IP
+  // address, which is not worth keeping around once Meta has it. Left in place
+  // when the send fails, so the failure can be investigated and re-sent.
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      metaFbp: null,
+      metaFbc: null,
+      clientIp: null,
+      clientUserAgent: null,
+      checkoutUrl: null,
+    },
+  });
 }
 
 /**

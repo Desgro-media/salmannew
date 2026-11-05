@@ -6,7 +6,8 @@ import { calculateShipping } from "@/lib/shipping";
 import { getStoreSettings } from "@/lib/store-settings";
 import { codAvailability } from "@/lib/cod";
 import { formatDeliveryDate, formatPrice } from "@/lib/format";
-import { notifyOwnerAfterResponse } from "@/lib/payments";
+import { notifyOwnerAfterResponse, reportPurchaseAfterResponse } from "@/lib/payments";
+import { metaCapiConfig, readBrowserSignals } from "@/lib/meta-capi";
 import { orderPayloadSchema } from "@/lib/order-schema";
 import { createRazorpayOrder, razorpayKeyId, toPaise } from "@/lib/razorpay";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
@@ -96,8 +97,15 @@ export async function POST(request: Request) {
     }),
   };
 
+  // Kept on the order for Meta's Conversions API, because an online order may be
+  // settled later by Razorpay's webhook, which has no browser to ask. Only read
+  // while that is switched on, so the store holds no more about a visitor than
+  // it did before.
+  const browserSignals = metaCapiConfig() ? readBrowserSignals(request) : {};
+
   /** Everything both payment methods write, so the two paths cannot drift apart. */
   const sharedOrderData = {
+    ...browserSignals,
     orderNumber,
     subtotal,
     shipping,
@@ -178,6 +186,8 @@ export async function POST(request: Request) {
       // can never exist without its first checkpoint.
       statusEvents: { create: { status: "RECEIVED" } },
     });
+
+    reportPurchaseAfterResponse(order.id);
 
     notifyOwnerAfterResponse({
       orderNumber,

@@ -98,7 +98,9 @@ Required env vars (see `.env.example`):
 | `SESSION_SECRET` | `lib/auth.ts` | JWT signing key for admin sessions — **throws at runtime if unset** when an admin route is hit |
 | `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` | `prisma/seed.ts` | only used by `npx prisma db seed` |
 | `BLOB_READ_WRITE_TOKEN` | `app/api/admin/uploads/route.ts` | optional locally (falls back to writing `public/uploads/`); required-in-practice on Vercel |
-| `META_PIXEL_ID` | `components/analytics/MetaPixel.tsx` | optional — the numeric Meta pixel id; unset means no pixel loads. Set on **Production only** (§9.8) |
+| `META_PIXEL_ID` | `components/analytics/MetaPixel.tsx`, `lib/meta-capi.ts` | optional — the numeric Meta pixel id; unset means no pixel loads. Set on **Production only** (§9.8) |
+| `META_CAPI_ACCESS_TOKEN` | `lib/meta-capi.ts` | optional — Conversions API token; with it (and `META_PIXEL_ID`) set, each real order is also reported to Meta from the server. A secret; **Production only** (§9.8) |
+| `META_CAPI_TEST_EVENT_CODE` | `lib/meta-capi.ts` | optional — Events Manager's test code; only while verifying, then remove (Meta still counts these events) |
 
 Seed the DB (superadmin account + 6 products):
 
@@ -380,11 +382,22 @@ Conversion tracking for Meta (Facebook / Instagram) ads. The base snippet is mou
 | `AddToCart` | anything is added to the bag | `addItem` in `lib/store/cart.ts` (covers the product page and the shop cards) |
 | `InitiateCheckout` | `/checkout` opens with items in the bag | an effect in `CheckoutForm.tsx` |
 | `AddPaymentInfo` | the Razorpay window opens, or a cash-on-delivery order is submitted | `CheckoutForm.handleSubmit` |
-| `Purchase` | the server has verified the payment, or a cash-on-delivery order has been placed | the Razorpay `handler`, and the COD branch of `handleSubmit`, in `CheckoutForm.tsx` |
+| `Purchase` | the server has verified the payment, or a cash-on-delivery order has been placed | the Razorpay `handler`, and the COD branch of `handleSubmit`, in `CheckoutForm.tsx` — and again from the server, see below |
 
 Conventions: items are identified by **size SKU** on every event; `value` is whole rupees, shipping included on the checkout steps and `Purchase`; `Purchase` takes its value from the gateway's amount (paise ÷ 100), not the on-screen preview, and uses the order number as its event id. Every helper is a no-op when `window.fbq` does not exist, so call sites never check whether tracking is on.
 
 Two things to know when testing: Meta's script silently drops events from headless browsers (user agent `HeadlessChrome`), so an automated check must send a normal one; and it should abort requests to `www.facebook.com/tr`, so test traffic never reaches Meta.
+
+#### Server-side `Purchase` — `lib/meta-capi.ts`, `lib/payments.ts`
+
+The browser reports a purchase without saying who made it, and only if the customer's tab lives long enough to run the script. So the server also sends `Purchase` to Meta's Conversions API, with the customer's details attached, once `META_CAPI_ACCESS_TOKEN` is set. Both it and `META_PIXEL_ID` are needed; with either unset nothing is sent and nothing extra is stored.
+
+- **When.** `reportPurchaseAfterResponse(orderId)` runs through `after()`, never on the customer's critical path, from the two places an order becomes real: a placed COD order (`POST /api/orders`) and the `justPaid` branch of `markOrderPaid()`, which both the browser's verify call and Razorpay's webhook go through. That branch already fires once per order (it also gates the owner's email), which is what keeps the event from being sent twice. A failed send is logged as `[meta-capi]` and goes no further.
+- **Matching the browser's report.** Same event name (`Purchase`) and the order number as `event_id`. Meta counts the two once when both agree, for the same pixel within 48 hours, keeping the first it receives.
+- **What it carries.** `value` (the order total, as the browser reports it), `content_ids` (SKUs), `contents`, `num_items`, `order_id`. In `user_data`: email, phone (digits with country code 91), first and last name, city, state, pincode and country, each normalised and SHA-256 hashed per Meta's rules (see `meta-capi.ts`), plus the customer id as `external_id` for logged-in buyers, and, unhashed as Meta requires, the IP address, user agent and the `_fbp` / `_fbc` cookies.
+- **Browser details live on the order.** Razorpay's webhook has no browser, and Meta requires a user agent and page URL on a website event, so `POST /api/orders` saves `metaFbp`, `metaFbc`, `clientIp`, `clientUserAgent` and `checkoutUrl` on the `Order`, only while the feature is on. They are cleared once Meta has accepted the event and kept if the send failed, so the failure can be looked into. An order opened before this existed has none: it is paid normally and gets no server event.
+- **Trying it.** Set a numeric `META_PIXEL_ID` and the token in `.env.local`, and `META_CAPI_TEST_EVENT_CODE` from Events Manager → Test events. Meta still counts events sent with a test code, so do not place orders against the live pixel to try it.
+- **Other server-side senders.** If Events Manager lists "Conversions API" events for this pixel that this code did not send (an integration someone connected inside Meta), they carry no event id and are counted on top of the browser's. Turn that off before relying on this, or an order is reported three times.
 
 ### 9.9 Cash on delivery — `lib/cod.ts`, `POST /api/orders`
 
@@ -407,7 +420,7 @@ A second way to pay, chosen at checkout. Online orders are real once Razorpay co
 - **Purchasers page vs. its API twin are duplicated logic**, not shared — `app/admin/(dashboard)/products/[id]/purchasers/page.tsx` and `app/api/admin/products/[id]/purchases/route.ts` independently implement the same paginated query.
 - **Newsletter signup is fully client-side fake** — `NewsletterBand.tsx` never calls an API; no email is captured anywhere.
 - **The `images[i] ↔ sizes[i]` index pairing is a convention, not a DB constraint.** Nothing stops an admin from uploading gallery images in an order that doesn't match the sizes — if that happens, the gallery/size-sync feature (§8.3) will show the wrong photo for a given size.
-- **`Purchase` is reported by the browser only (§9.8).** An order the Razorpay webhook settles after the customer closed the tab is paid but never reaches Meta. Closing that gap means sending the event from the server (Meta's Conversions API), using the order number as the event id so it is not counted twice.
+- **`Purchase` reaches Meta from the server only once `META_CAPI_ACCESS_TOKEN` is set (§9.8).** Until then it is reported by the browser alone, and an order the Razorpay webhook settles after the customer closed the tab is paid but never reaches Meta.
 
 ---
 
