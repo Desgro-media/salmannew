@@ -21,8 +21,8 @@ const CHANNELS = [
   },
   {
     label: "Phone",
-    value: "+91 98765 43210",
-    href: "tel:+919876543210",
+    value: "+91 94473 67777",
+    href: "tel:+919447367777",
   },
   {
     label: "Instagram",

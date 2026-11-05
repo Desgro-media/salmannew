@@ -78,7 +78,7 @@ export async function Footer() {
           <p className="eyebrow text-paper/65">Get in touch</p>
           <ul className="mt-5 space-y-3 text-sm text-paper/80">
             <li>hello@salmanperfumes.com</li>
-            <li>+91 98765 43210</li>
+            <li>+91 94473 67777</li>
             <li>
               <a
                 href={LOCATION_MAPS_DIRECTIONS_URL}

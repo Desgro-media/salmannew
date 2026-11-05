@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getAllProducts } from "@/lib/products";
+import { getProductsNewestFirst } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
@@ -9,7 +9,7 @@ import { wellSurface } from "@/lib/product-well";
 import { StrikePrice } from "@/components/product/StrikePrice";
 
 export async function BestSellers() {
-  const products = await getAllProducts();
+  const products = await getProductsNewestFirst();
   const picks = products.filter((p) => p.bestseller);
 
   if (picks.length === 0) return null;

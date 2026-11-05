@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getAllProducts } from "@/lib/products";
+import { getProductsNewestFirst } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
@@ -10,7 +10,7 @@ import { wellSurface } from "@/lib/product-well";
 import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
 
 export async function SignatureCollections() {
-  const products = await getAllProducts();
+  const products = await getProductsNewestFirst();
 
   return (
     <section className="border-t border-line py-16 sm:py-24 md:py-32">
