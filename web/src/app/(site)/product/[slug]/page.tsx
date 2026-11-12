@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/products";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { AddToCartPanel } from "@/components/product/AddToCartPanel";
+import { TrustBadges } from "@/components/product/TrustBadges";
 import { ProductSelectionProvider } from "@/lib/product-selection-context";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
 import { AccordionItem } from "@/components/ui/Accordion";
@@ -91,6 +92,7 @@ export default async function ProductPage({
 
             <div className="mt-8">
               <AddToCartPanel product={product} />
+              <TrustBadges showCod={settings.codEnabled} />
             </div>
 
             <p className="mt-8 leading-relaxed text-ink-soft">
