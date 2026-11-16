@@ -1,5 +1,6 @@
 import { Hero } from "@/components/home/Hero";
 import { Marquee } from "@/components/layout/Marquee";
+import { NewArrivals } from "@/components/home/NewArrivals";
 import { BestSellers } from "@/components/home/BestSellers";
 import { SignatureCollections } from "@/components/home/SignatureCollections";
 import { FeatureSpotlight } from "@/components/home/FeatureSpotlight";
@@ -12,6 +13,7 @@ export default function Home() {
     <>
       <Hero />
       <Marquee />
+      <NewArrivals />
       <BestSellers />
       <InstagramReels />
       <SignatureCollections />
