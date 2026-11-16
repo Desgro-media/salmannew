@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getProductsNewestFirst } from "@/lib/products";
+import { getNewArrivals } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { Reveal } from "@/components/motion/Reveal";
 import { HorizontalScroller } from "@/components/ui/HorizontalScroller";
@@ -8,14 +8,11 @@ import { cutoutSrc } from "@/lib/product-image";
 import { wellSurface } from "@/lib/product-well";
 import { StrikePrice } from "@/components/product/StrikePrice";
 
-// How many of the most recently added scents the row shows.
-const COUNT = 8;
-
 // The latest additions to the range, newest first. Driven purely by when a
 // product was created, so adding a scent in the admin puts it at the front
 // here with no extra flag to remember.
 export async function NewArrivals() {
-  const products = (await getProductsNewestFirst()).slice(0, COUNT);
+  const products = await getNewArrivals();
 
   if (products.length === 0) return null;
 
@@ -26,11 +23,13 @@ export async function NewArrivals() {
         <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl md:text-6xl">
           New Arrivals
         </h2>
+        {/* Opens the shop filtered to the same scents, so the row and the page
+            it leads to agree on what counts as new. */}
         <Link
-          href="/shop"
+          href="/shop?type=NewArrivals"
           className="mt-4 inline-block text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
         >
-          Shop all →
+          View all →
         </Link>
       </Reveal>
 

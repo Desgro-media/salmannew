@@ -63,12 +63,13 @@ export function matchesShopFilter(
 // because these are URL values — the header and the homepage rows link straight
 // into ?type=, which is what makes "Best Sellers" in the nav open the shop with
 // the filter already applied.
-export const SHOP_TYPES = ["All", "Signature", "BestSellers"] as const;
+export const SHOP_TYPES = ["All", "NewArrivals", "Signature", "BestSellers"] as const;
 
 export type ShopType = (typeof SHOP_TYPES)[number];
 
 const TYPE_LABELS: Record<ShopType, string> = {
   All: "All types",
+  NewArrivals: "New Arrivals",
   Signature: "Signature Collection",
   BestSellers: "Best Sellers",
 };
@@ -77,15 +78,21 @@ export function shopTypeLabel(type: ShopType): string {
   return TYPE_LABELS[type];
 }
 
-// Both read a flag set per product in the admin. Signature started life as
-// "every scent that isn't Privé" — true of the catalogue on the day it was
-// written, but it made the collection something no one could edit. It is a
-// column now, seeded from that same rule.
+// Best Sellers and Signature read a flag set per product in the admin.
+// Signature started life as "every scent that isn't Privé" — true of the
+// catalogue on the day it was written, but it made the collection something no
+// one could edit. It is a column now, seeded from that same rule.
+//
+// New Arrivals has no flag: it is the latest few scents by when they were
+// added, worked out on the server (getNewArrivals) and passed in as their ids,
+// newest first. A product isn't new on its own, only relative to the rest.
 export function matchesShopType(
-  product: { bestseller?: boolean; signature?: boolean },
+  product: { id: string; bestseller?: boolean; signature?: boolean },
   type: ShopType,
+  newArrivalIds: readonly string[],
 ): boolean {
   if (type === "All") return true;
+  if (type === "NewArrivals") return newArrivalIds.includes(product.id);
   if (type === "BestSellers") return product.bestseller === true;
   return product.signature === true;
 }

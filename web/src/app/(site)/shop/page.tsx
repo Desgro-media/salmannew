@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAllProducts } from "@/lib/products";
+import { getAllProducts, getNewArrivals } from "@/lib/products";
 import { Marquee } from "@/components/layout/Marquee";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import {
@@ -24,7 +24,11 @@ export default async function ShopPage({
     sort?: string;
   }>;
 }) {
-  const [products, params] = await Promise.all([getAllProducts(), searchParams]);
+  const [products, newArrivals, params] = await Promise.all([
+    getAllProducts(),
+    getNewArrivals(),
+    searchParams,
+  ]);
 
   // Matched against the allowed values rather than cast: these arrive from a
   // URL anyone can edit, and an unknown one should open the shop on its
@@ -57,6 +61,7 @@ export default async function ShopPage({
         <ShopGrid
           key={`${initialFilter}|${initialType}|${initialBand}|${initialSort}`}
           products={products}
+          newArrivalIds={newArrivals.map((p) => p.id)}
           initialFilter={initialFilter}
           initialType={initialType}
           initialBand={initialBand}
