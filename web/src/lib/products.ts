@@ -68,6 +68,20 @@ export async function getProductsNewestFirst(): Promise<Product[]> {
   return rows.map(toProduct);
 }
 
+// How many of the latest scents count as "new arrivals". One number shared by
+// the homepage row and the shop's New Arrivals filter, so the two always agree.
+export const NEW_ARRIVALS_COUNT = 8;
+
+export async function getNewArrivals(): Promise<Product[]> {
+  const rows = await prisma.product.findMany({
+    where: { isArchived: false },
+    include: productWithSizes.include,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: NEW_ARRIVALS_COUNT,
+  });
+  return rows.map(toProduct);
+}
+
 export async function getProductBySlug(slug: string): Promise<Product | undefined> {
   const row = await prisma.product.findUnique({
     where: { slug },
