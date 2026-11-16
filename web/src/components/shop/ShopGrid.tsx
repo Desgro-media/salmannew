@@ -73,15 +73,9 @@ export function ShopGrid({
         matchesPriceBand(p, band),
     );
 
-    // Featured is whatever order the catalogue came in, so it is the one sort
-    // that must not copy — the array is handed straight back. New Arrivals is
-    // the exception: it leads with the newest, the same as the homepage row.
-    if (sort === "Featured") {
-      if (type !== "NewArrivals") return kept;
-      return [...kept].sort(
-        (a, b) => newArrivalIds.indexOf(a.id) - newArrivalIds.indexOf(b.id),
-      );
-    }
+    // Featured is whatever order the catalogue came in — newest first — so it
+    // is the one sort that must not copy; the array is handed straight back.
+    if (sort === "Featured") return kept;
 
     const direction = sort === "PriceAsc" ? 1 : -1;
     return [...kept].sort(
