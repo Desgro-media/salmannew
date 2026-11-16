@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAllProducts, getNewArrivals } from "@/lib/products";
+import { getNewArrivals, getProductsNewestFirst } from "@/lib/products";
 import { Marquee } from "@/components/layout/Marquee";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import {
@@ -25,7 +25,7 @@ export default async function ShopPage({
   }>;
 }) {
   const [products, newArrivals, params] = await Promise.all([
-    getAllProducts(),
+    getProductsNewestFirst(),
     getNewArrivals(),
     searchParams,
   ]);
