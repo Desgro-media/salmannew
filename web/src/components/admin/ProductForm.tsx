@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
@@ -20,10 +20,16 @@ function slugify(input: string): string {
     .replace(/(^-+|-+$)/g, "");
 }
 
-function suggestSku(slug: string, volumeMl: string): string {
+// Liquids are sold by volume (ml), solid perfumes by weight (mg).
+const SIZE_UNITS = ["ml", "mg"] as const;
+type SizeUnit = (typeof SIZE_UNITS)[number];
+
+function suggestSku(slug: string, volumeMl: string, unit: SizeUnit = "ml"): string {
   const prefix = (slugify(slug).replace(/-/g, "").slice(0, 3) || "prd").toUpperCase();
   const vol = volumeMl ? volumeMl.padStart(3, "0") : "000";
-  return `SP-${prefix}-${vol}`;
+  // ml keeps the original SP-IMP-030 shape so existing codes don't change; a
+  // solid gets an MG suffix so it can't collide with a same-numbered ml size.
+  return `SP-${prefix}-${vol}${unit === "mg" ? "MG" : ""}`;
 }
 
 function discountSummary(price: string, compareAtPrice: string): string | null {
@@ -38,21 +44,34 @@ function SectionCard({
   step,
   title,
   description,
+  issues = 0,
   children,
 }: {
   step: string;
   title: string;
   description?: string;
+  /** unfilled fields in this section; turns the whole card red so it's easy to spot */
+  issues?: number;
   children: ReactNode;
 }) {
+  const hasIssues = issues > 0;
   return (
-    <section className="border border-line bg-paper">
-      <div className="flex items-baseline gap-3 border-b border-line bg-paper-2 px-6 py-4">
-        <span className="font-mono text-xs text-gold-ink">{step}</span>
-        <div>
+    <section className={`border bg-paper ${hasIssues ? "border-red-600" : "border-line"}`}>
+      <div
+        className={`flex items-baseline gap-3 border-b px-6 py-4 ${
+          hasIssues ? "border-red-600 bg-red-50" : "border-line bg-paper-2"
+        }`}
+      >
+        <span className={`font-mono text-xs ${hasIssues ? "text-red-700" : "text-gold-ink"}`}>{step}</span>
+        <div className="flex-1">
           <h2 className="text-sm font-semibold uppercase tracking-[0.1em]">{title}</h2>
           {description && <p className="mt-0.5 text-xs text-ink-soft">{description}</p>}
         </div>
+        {hasIssues && (
+          <span className="shrink-0 bg-red-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white">
+            {issues} to fix
+          </span>
+        )}
       </div>
       <div className="space-y-5 px-6 py-6">{children}</div>
     </section>
@@ -86,7 +105,9 @@ interface SizeForm {
   id?: string;
   /** a set's option name ("Gift Box"); single perfumes derive it from volumeMl */
   label: string;
+  /** the number typed in the Size box; its unit is `unit` (ml or mg) */
   volumeMl: string;
+  unit: SizeUnit;
   sku: string;
   price: string;
   onSale: boolean;
@@ -134,6 +155,7 @@ export interface CatalogEntry {
 const emptySize: SizeForm = {
   label: "",
   volumeMl: "",
+  unit: "ml",
   sku: "",
   price: "",
   onSale: false,
@@ -226,6 +248,9 @@ function fromInitial(initial: ProductFormInitial): ProductFormValues {
       id: s.id,
       label: s.label,
       volumeMl: String(s.volumeMl),
+      // Only the label records the unit (volumeMl is just the number), so read
+      // it back from there: "10 mg" reopens as mg, everything else as ml.
+      unit: /\bmg\b/i.test(s.label) ? "mg" : "ml",
       sku: s.sku,
       price: String(s.price),
       onSale: s.compareAtPrice != null,
@@ -242,6 +267,67 @@ async function uploadFile(file: File): Promise<string> {
   if (!res.ok) throw new Error("Upload failed.");
   const { url } = await res.json();
   return url;
+}
+
+type FormErrors = Record<string, string>;
+
+/**
+ * Every field that would stop the product from saving, keyed by where it lives
+ * (`name`, `size.0.price`, `setItem.1.size`, …). Runs on all fields at once so
+ * the form can mark each one in red rather than reporting only the first.
+ * These mirror what the server's schema (admin-schema.ts) rejects.
+ */
+function validate(values: ProductFormValues): FormErrors {
+  const e: FormErrors = {};
+  const required = "Required";
+
+  if (!values.name.trim()) e.name = required;
+  if (!values.tagline.trim()) e.tagline = required;
+  if (!values.description.trim()) e.description = required;
+  if (!values.story.trim()) e.story = required;
+  // Both normally fill themselves in from the name; they're only empty here if
+  // the name is empty or has no letters or digits to build an address from.
+  if (!values.slug.trim()) e.slug = required;
+  if (!values.fullName.trim()) e.fullName = required;
+  if (values.images.length === 0) e.images = "Add at least one product photo.";
+
+  if (values.isSet) {
+    // Fully blank rows are ignored on save, so only half-filled rows are wrong,
+    // plus the case where nothing at all is listed.
+    const filled = values.setItems
+      .map((item, i) => ({ item, i }))
+      .filter(({ item }) => item.name.trim() || item.size.trim());
+    if (filled.length === 0) {
+      e["setItem.0.name"] = required;
+      e["setItem.0.size"] = required;
+    }
+    for (const { item, i } of filled) {
+      if (!item.name.trim()) e[`setItem.${i}.name`] = required;
+      if (!item.size.trim()) e[`setItem.${i}.size`] = required;
+    }
+  }
+
+  values.sizes.forEach((size, i) => {
+    if (values.isSet) {
+      if (!size.label.trim()) e[`size.${i}.label`] = required;
+    } else if (!size.volumeMl.trim()) {
+      e[`size.${i}.volume`] = required;
+    } else if (!Number.isInteger(Number(size.volumeMl)) || Number(size.volumeMl) <= 0) {
+      e[`size.${i}.volume`] = "Whole number above 0";
+    }
+
+    if (!size.price.trim()) e[`size.${i}.price`] = required;
+    else if (!(Number(size.price) >= 0)) e[`size.${i}.price`] = "Enter a valid price";
+
+    if (size.onSale && !discountSummary(size.price, size.compareAtPrice)) {
+      e[`size.${i}.compareAt`] = size.compareAtPrice.trim() ? "Must be higher than the price" : required;
+    }
+
+    // The server refuses a size with no photo, so it's as required as the rest.
+    if (!size.image) e[`size.${i}.image`] = "Add a photo for this size.";
+  });
+
+  return e;
 }
 
 export function ProductForm({
@@ -262,6 +348,18 @@ export function ProductForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Nothing is flagged until the first Save attempt. After that the marks are
+  // recomputed on every keystroke, so a field drops its red as soon as it's
+  // filled — the admin can watch the list shrink to nothing.
+  const [attempted, setAttempted] = useState(false);
+  const errors = useMemo<FormErrors>(() => (attempted ? validate(values) : {}), [attempted, values]);
+  const issueCount = Object.keys(errors).length;
+  const sectionIssues = (...keys: string[]) =>
+    Object.keys(errors).filter((k) => keys.some((p) => k === p || k.startsWith(`${p}.`))).length;
+  /** value for aria-invalid: set only when the field has an error */
+  const bad = (key: string) => (errors[key] ? true : undefined);
 
   function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -305,12 +403,37 @@ export function ProductForm({
     });
   }
 
+  // The size number and its unit both feed the auto-suggested SKU, so changing
+  // either re-suggests it — unless the admin has typed their own code.
   function handleVolumeChange(index: number, volumeMl: string) {
     const size = values.sizes[index];
-    const skuWasAuto = size.sku === "" || size.sku === suggestSku(values.slug, size.volumeMl);
+    const skuWasAuto = size.sku === "" || size.sku === suggestSku(values.slug, size.volumeMl, size.unit);
     updateSize(index, {
       volumeMl,
-      ...(skuWasAuto ? { sku: suggestSku(values.slug, volumeMl) } : {}),
+      ...(skuWasAuto ? { sku: suggestSku(values.slug, volumeMl, size.unit) } : {}),
+    });
+  }
+
+  function handleUnitChange(index: number, unit: SizeUnit) {
+    const size = values.sizes[index];
+    const skuWasAuto = size.sku === "" || size.sku === suggestSku(values.slug, size.volumeMl, size.unit);
+    updateSize(index, {
+      unit,
+      ...(skuWasAuto ? { sku: suggestSku(values.slug, size.volumeMl, unit) } : {}),
+    });
+  }
+
+  // Scroll to the first red field and put the cursor in it, so the admin doesn't
+  // have to hunt through a long form. Runs a frame later, once the red marks
+  // (and the Advanced section, if it had to open) have rendered.
+  function focusFirstInvalid() {
+    requestAnimationFrame(() => {
+      const first = formRef.current?.querySelector<HTMLElement>(
+        '[aria-invalid="true"], [data-invalid="true"]',
+      );
+      if (!first) return;
+      first.scrollIntoView({ block: "center", behavior: "smooth" });
+      first.focus({ preventScroll: true });
     });
   }
 
@@ -345,8 +468,13 @@ export function ProductForm({
     e.preventDefault();
     setError(null);
 
-    if (values.images.length === 0) {
-      setError("Add at least one product photo.");
+    const found = validate(values);
+    if (Object.keys(found).length > 0) {
+      setAttempted(true);
+      // These two live under "Advanced settings"; open it or the red mark would
+      // be on a field nobody can see.
+      if (found.slug || found.fullName) setShowAdvanced(true);
+      focusFirstInvalid();
       return;
     }
 
@@ -357,30 +485,6 @@ export function ProductForm({
         productSlug: item.productSlug || undefined,
       }))
       .filter((item) => item.name || item.size);
-    if (values.isSet) {
-      if (setItems.length === 0) {
-        setError("List at least one item under \"What's inside the set\".");
-        return;
-      }
-      if (setItems.some((item) => !item.name || !item.size)) {
-        setError("Every item in the set needs both a name and a size (e.g. \"50 ml\").");
-        return;
-      }
-      if (values.sizes.some((s) => !s.label.trim())) {
-        setError("Give each set option a name, e.g. \"Gift Box\".");
-        return;
-      }
-    }
-
-    const invalidDiscount = values.sizes.some(
-      (s) => s.onSale && !discountSummary(s.price, s.compareAtPrice),
-    );
-    if (invalidDiscount) {
-      setError(
-        "One of your sizes is marked \"on sale\" but the original price isn't higher than the sale price. Fix or turn off that discount before saving.",
-      );
-      return;
-    }
 
     const payload = {
       slug: values.slug,
@@ -408,9 +512,9 @@ export function ProductForm({
         // A set's options have no single volume. volumeMl still has to be a
         // positive number (it orders the options), so it's the option's
         // position: the first one listed is the one the page opens on.
-        label: values.isSet ? s.label.trim() : `${s.volumeMl} ml`,
+        label: values.isSet ? s.label.trim() : `${s.volumeMl} ${s.unit}`,
         volumeMl: values.isSet ? i + 1 : Number(s.volumeMl),
-        sku: s.sku || suggestSku(values.slug, values.isSet ? `SET${i + 1}` : s.volumeMl),
+        sku: s.sku || (values.isSet ? suggestSku(values.slug, `SET${i + 1}`) : suggestSku(values.slug, s.volumeMl, s.unit)),
         price: Math.round(Number(s.price)),
         compareAtPrice: s.onSale && s.compareAtPrice ? Math.round(Number(s.compareAtPrice)) : undefined,
         image: s.image,
@@ -443,10 +547,17 @@ export function ProductForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-6xl pb-28">
+    // noValidate: the browser's own check stops at the first empty field with a
+    // small tooltip. validate() runs instead so every empty field turns red.
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="max-w-6xl pb-28">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <div className="space-y-6">
-          <SectionCard step="01" title="Basics" description="What the product is called and how it's grouped.">
+          <SectionCard
+            step="01"
+            title="Basics"
+            description="What the product is called and how it's grouped."
+            issues={sectionIssues("name", "tagline", "slug", "fullName")}
+          >
             <div>
               <span className="text-xs font-medium text-ink-soft">What are you adding?</span>
               <div className="mt-1.5 grid grid-cols-2 border border-line text-xs font-semibold uppercase tracking-[0.08em]">
@@ -476,17 +587,19 @@ export function ProductForm({
               )}
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Field label="Product name" className="sm:col-span-2">
+              <Field label="Product name" className="sm:col-span-2" error={errors.name}>
                 <Input
                   required
+                  aria-invalid={bad("name")}
                   value={values.name}
                   onChange={(e) => handleNameChange(e.target.value)}
                   placeholder="Imperial"
                 />
               </Field>
-              <Field label="Tagline" className="sm:col-span-2">
+              <Field label="Tagline" className="sm:col-span-2" error={errors.tagline}>
                 <Input
                   required
+                  aria-invalid={bad("tagline")}
                   value={values.tagline}
                   onChange={(e) => update("tagline", e.target.value)}
                   placeholder="A short line shown under the name, e.g. Amber gold, worn like a crown."
@@ -582,15 +695,21 @@ export function ProductForm({
               </button>
               {showAdvanced && (
                 <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <Field label="Web address">
+                  <Field label="Web address" error={errors.slug}>
                     <Input
+                      aria-invalid={bad("slug")}
                       value={values.slug}
                       onChange={(e) => update("slug", slugify(e.target.value))}
                       placeholder="imperial"
                     />
                   </Field>
-                  <Field label="Product page title">
-                    <Input required value={values.fullName} onChange={(e) => update("fullName", e.target.value)} />
+                  <Field label="Product page title" error={errors.fullName}>
+                    <Input
+                      required
+                      aria-invalid={bad("fullName")}
+                      value={values.fullName}
+                      onChange={(e) => update("fullName", e.target.value)}
+                    />
                   </Field>
                   <p className="text-xs text-ink-soft sm:col-span-2">
                     We fill these in automatically from the product name. Only change them if you need something different.
@@ -600,7 +719,12 @@ export function ProductForm({
             </div>
           </SectionCard>
 
-          <SectionCard step="03" title="Gallery Photos" description="Shown on the shop grid and product page.">
+          <SectionCard
+            step="03"
+            title="Gallery Photos"
+            description="Shown on the shop grid and product page."
+            issues={sectionIssues("images")}
+          >
             {values.images.length > 0 && (
               <div className="flex flex-wrap gap-3">
                 {values.images.map((url, i) => (
@@ -618,24 +742,37 @@ export function ProductForm({
                 ))}
               </div>
             )}
-            <UploadButton label="+ Add Photos" multiple onFiles={handleGalleryUpload} />
+            <div
+              data-invalid={errors.images ? "true" : undefined}
+              className={errors.images ? "border border-dashed border-red-600 bg-red-50/50 p-3" : undefined}
+            >
+              <UploadButton label="+ Add Photos" multiple onFiles={handleGalleryUpload} />
+              {errors.images && <p className="mt-2 text-xs font-medium text-red-700">{errors.images}</p>}
+            </div>
           </SectionCard>
         </div>
 
         <div className="space-y-6">
-          <SectionCard step="02" title="Story" description="The copy shown on the product page.">
-            <Field label="Description">
+          <SectionCard
+            step="02"
+            title="Story"
+            description="The copy shown on the product page."
+            issues={sectionIssues("description", "story", "setItem")}
+          >
+            <Field label="Description" error={errors.description}>
               <Textarea
                 required
+                aria-invalid={bad("description")}
                 rows={4}
                 value={values.description}
                 onChange={(e) => update("description", e.target.value)}
                 placeholder="A short paragraph describing the scent."
               />
             </Field>
-            <Field label="Story">
+            <Field label="Story" error={errors.story}>
               <Textarea
                 required
+                aria-invalid={bad("story")}
                 rows={4}
                 value={values.story}
                 onChange={(e) => update("story", e.target.value)}
@@ -652,15 +789,17 @@ export function ProductForm({
                 <div className="mt-4 space-y-3">
                   {values.setItems.map((item, i) => (
                     <div key={i} className="grid grid-cols-1 gap-3 border border-line p-3 sm:grid-cols-[1fr_7rem]">
-                      <Field label={`Item ${i + 1}`}>
+                      <Field label={`Item ${i + 1}`} error={errors[`setItem.${i}.name`]}>
                         <Input
+                          aria-invalid={bad(`setItem.${i}.name`)}
                           value={item.name}
                           onChange={(e) => updateSetItem(i, { name: e.target.value })}
                           placeholder="me. Kiano"
                         />
                       </Field>
-                      <Field label="Size">
+                      <Field label="Size" error={errors[`setItem.${i}.size`]}>
                         <Input
+                          aria-invalid={bad(`setItem.${i}.size`)}
                           value={item.size}
                           onChange={(e) => updateSetItem(i, { size: e.target.value })}
                           placeholder="50 ml"
@@ -741,8 +880,9 @@ export function ProductForm({
             description={
               values.isSet
                 ? "Usually one option. Add more only if you sell the set in more than one version."
-                : "At least one size is required."
+                : "At least one size is required. Pick ml for liquids, mg for solids."
             }
+            issues={sectionIssues("size")}
           >
             <div className="space-y-5">
               {values.sizes.map((size, i) => {
@@ -764,31 +904,50 @@ export function ProductForm({
                       )}
                     </div>
                     <div className="p-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {values.isSet ? (
-                          <Field label="Option name">
+                          <Field label="Option name" error={errors[`size.${i}.label`]}>
                             <Input
                               required
+                              aria-invalid={bad(`size.${i}.label`)}
                               value={size.label}
                               onChange={(e) => updateSize(i, { label: e.target.value })}
                               placeholder="Gift Box"
                             />
                           </Field>
                         ) : (
-                          <Field label="Size (ml)">
-                            <Input
-                              required
-                              type="number"
-                              value={size.volumeMl}
-                              onChange={(e) => handleVolumeChange(i, e.target.value)}
-                              placeholder="30"
-                            />
+                          <Field label="Size" error={errors[`size.${i}.volume`]}>
+                            <div className="flex gap-2">
+                              <Input
+                                required
+                                type="number"
+                                min={1}
+                                className="min-w-0 flex-1"
+                                aria-invalid={bad(`size.${i}.volume`)}
+                                value={size.volumeMl}
+                                onChange={(e) => handleVolumeChange(i, e.target.value)}
+                                placeholder="30"
+                              />
+                              <select
+                                aria-label="Unit"
+                                value={size.unit}
+                                onChange={(e) => handleUnitChange(i, e.target.value as SizeUnit)}
+                                className="mt-1.5 min-h-11 w-[4.5rem] shrink-0 border border-line bg-transparent px-2.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
+                              >
+                                {SIZE_UNITS.map((u) => (
+                                  <option key={u} value={u}>
+                                    {u}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </Field>
                         )}
-                        <Field label="Price (₹) — what customers pay">
+                        <Field label="Price (₹) — what customers pay" error={errors[`size.${i}.price`]}>
                           <Input
                             required
                             type="number"
+                            aria-invalid={bad(`size.${i}.price`)}
                             value={size.price}
                             onChange={(e) => updateSize(i, { price: e.target.value })}
                           />
@@ -814,9 +973,13 @@ export function ProductForm({
                         </label>
                         {size.onSale && (
                           <div className="mt-3">
-                            <Field label="MRP (₹) — the higher price, shown crossed out">
+                            <Field
+                              label="MRP (₹) — the higher price, shown crossed out"
+                              error={errors[`size.${i}.compareAt`]}
+                            >
                               <Input
                                 type="number"
+                                aria-invalid={bad(`size.${i}.compareAt`)}
                                 value={size.compareAtPrice}
                                 onChange={(e) => updateSize(i, { compareAtPrice: e.target.value })}
                                 placeholder="e.g. 2999"
@@ -833,8 +996,17 @@ export function ProductForm({
                       </div>
 
                       <div className="mt-4 border-t border-line pt-4">
-                        <span className="text-xs font-medium text-ink-soft">Size photo</span>
-                        <div className="mt-1.5 flex items-center gap-3">
+                        <span
+                          className={`text-xs font-medium ${errors[`size.${i}.image`] ? "text-red-700" : "text-ink-soft"}`}
+                        >
+                          Size photo
+                        </span>
+                        <div
+                          data-invalid={errors[`size.${i}.image`] ? "true" : undefined}
+                          className={`mt-1.5 flex items-center gap-3 ${
+                            errors[`size.${i}.image`] ? "border border-dashed border-red-600 bg-red-50/50 p-3" : ""
+                          }`}
+                        >
                           {size.image && (
                             <div className="relative h-16 w-14 overflow-hidden border border-line">
                               <Image src={size.image} alt="" fill sizes="56px" className="object-cover" />
@@ -844,6 +1016,9 @@ export function ProductForm({
                             label={size.image ? "Replace" : "Upload"}
                             onFiles={(files) => handleSizeImageUpload(i, files)}
                           />
+                          {errors[`size.${i}.image`] && (
+                            <p className="text-xs font-medium text-red-700">{errors[`size.${i}.image`]}</p>
+                          )}
                         </div>
                       </div>
 
@@ -881,6 +1056,13 @@ export function ProductForm({
         <div className="container-grid flex items-center justify-between gap-4 py-4">
           {error ? (
             <p className="text-sm text-red-700">{error}</p>
+          ) : issueCount > 0 ? (
+            <p className="text-sm font-medium text-red-700">
+              {issueCount === 1
+                ? "1 field still needs attention"
+                : `${issueCount} fields still need attention`}{" "}
+              — marked in red above.
+            </p>
           ) : (
             <p className="text-sm text-ink-soft">
               {uploading ? "Uploading photo…" : "Fields marked required must be filled in."}
