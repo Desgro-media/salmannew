@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PRODUCT_CATEGORIES } from "./shop-filters";
+import { setItemsSchema } from "./set-items";
 
 export const productSizeInputSchema = z
   .object({
@@ -40,9 +41,28 @@ export const productInputSchema = z.object({
   bestseller: z.boolean().optional(),
   signature: z.boolean().optional(),
   isNew: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  isSet: z.boolean().optional(),
+  setItems: setItemsSchema.optional(),
   sizes: z.array(productSizeInputSchema).min(1),
 });
 
-export const productUpdateSchema = productInputSchema.partial().extend({
-  isArchived: z.boolean().optional(),
-});
+const SET_NEEDS_ITEMS = {
+  message: "A set needs at least one item listed under \"What's inside\".",
+  path: ["setItems"],
+};
+
+// Checked on create, and on any update that touches either field. An update
+// that only flips isActive leaves both undefined and passes.
+function setHasItems(data: { isSet?: boolean; setItems?: unknown[] }): boolean {
+  return data.isSet !== true || (data.setItems?.length ?? 0) > 0;
+}
+
+export const productCreateSchema = productInputSchema.refine(setHasItems, SET_NEEDS_ITEMS);
+
+export const productUpdateSchema = productInputSchema
+  .partial()
+  .extend({
+    isArchived: z.boolean().optional(),
+  })
+  .refine(setHasItems, SET_NEEDS_ITEMS);

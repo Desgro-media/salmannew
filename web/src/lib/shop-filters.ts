@@ -33,7 +33,7 @@ export function categoryLabel(category: string): string {
 // are what a visitor is actually choosing between, and nine chips scrolling off
 // the edge hid that. The families stay in PRODUCT_CATEGORIES, where the admin
 // form and the badge on a product card still use them.
-export const SHOP_FILTERS = ["All", "Me", "Prive"] as const;
+export const SHOP_FILTERS = ["All", "Me", "Prive", "Sets"] as const;
 
 export type ShopFilter = (typeof SHOP_FILTERS)[number];
 
@@ -41,6 +41,7 @@ const FILTER_LABELS: Record<ShopFilter, string> = {
   All: "All",
   Me: "me.",
   Prive: "Privé",
+  Sets: "Gift Sets",
 };
 
 export function shopFilterLabel(filter: ShopFilter): string {
@@ -50,25 +51,36 @@ export function shopFilterLabel(filter: ShopFilter): string {
 // `me.` is defined as "not Privé" rather than as a stored flag of its own: the
 // two lines exhaust the catalogue, so a scent added under a new family lands in
 // `me.` without anyone having to remember to update this.
+//
+// A gift set belongs to neither line — it mixes them — so it only shows under
+// All and its own Gift Sets chip, whatever category happens to be stored on it.
 export function matchesShopFilter(
-  product: { category: string },
+  product: { category: string; isSet?: boolean },
   filter: ShopFilter,
 ): boolean {
   if (filter === "All") return true;
+  if (filter === "Sets") return product.isSet === true;
+  if (product.isSet) return false;
   if (filter === "Prive") return product.category === "Prive";
   return product.category !== "Prive";
+}
+
+/** The label a product's category shows as on cards and its page. */
+export function productTypeLabel(product: { category: string; isSet?: boolean }): string {
+  return product.isSet ? "Gift Set" : categoryLabel(product.category);
 }
 
 // The second axis, crossed with the line chips above. Kept as short tokens
 // because these are URL values — the header and the homepage rows link straight
 // into ?type=, which is what makes "Best Sellers" in the nav open the shop with
 // the filter already applied.
-export const SHOP_TYPES = ["All", "Signature", "BestSellers"] as const;
+export const SHOP_TYPES = ["All", "NewArrivals", "Signature", "BestSellers"] as const;
 
 export type ShopType = (typeof SHOP_TYPES)[number];
 
 const TYPE_LABELS: Record<ShopType, string> = {
   All: "All types",
+  NewArrivals: "New Arrivals",
   Signature: "Signature Collection",
   BestSellers: "Best Sellers",
 };
@@ -77,15 +89,21 @@ export function shopTypeLabel(type: ShopType): string {
   return TYPE_LABELS[type];
 }
 
-// Both read a flag set per product in the admin. Signature started life as
-// "every scent that isn't Privé" — true of the catalogue on the day it was
-// written, but it made the collection something no one could edit. It is a
-// column now, seeded from that same rule.
+// Best Sellers and Signature read a flag set per product in the admin.
+// Signature started life as "every scent that isn't Privé" — true of the
+// catalogue on the day it was written, but it made the collection something no
+// one could edit. It is a column now, seeded from that same rule.
+//
+// New Arrivals has no flag: it is the latest few scents by when they were
+// added, worked out on the server (getNewArrivals) and passed in as their ids,
+// newest first. A product isn't new on its own, only relative to the rest.
 export function matchesShopType(
-  product: { bestseller?: boolean; signature?: boolean },
+  product: { id: string; bestseller?: boolean; signature?: boolean },
   type: ShopType,
+  newArrivalIds: readonly string[],
 ): boolean {
   if (type === "All") return true;
+  if (type === "NewArrivals") return newArrivalIds.includes(product.id);
   if (type === "BestSellers") return product.bestseller === true;
   return product.signature === true;
 }

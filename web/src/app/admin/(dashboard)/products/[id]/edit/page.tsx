@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { getLinkableProducts } from "@/lib/admin-products";
 
 export default async function EditProductPage({
   params,
@@ -19,11 +20,13 @@ export default async function EditProductPage({
 
   if (!product) notFound();
 
+  const catalog = await getLinkableProducts(product.id);
+
   return (
     <div>
       <h1 className="text-3xl font-black tracking-tight">Edit {product.name}</h1>
       <div className="mt-8">
-        <ProductForm productId={product.id} initial={product} />
+        <ProductForm productId={product.id} initial={product} catalog={catalog} />
       </div>
     </div>
   );

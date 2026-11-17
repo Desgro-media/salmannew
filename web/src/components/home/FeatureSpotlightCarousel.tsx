@@ -9,6 +9,8 @@ import { priceRangeFor } from "@/lib/price";
 import { formatPrice } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/Button";
 import { cutoutSrc } from "@/lib/product-image";
+import { productTypeLabel } from "@/lib/shop-filters";
+import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
 
 const ROTATE_MS = 5000;
 
@@ -23,8 +25,12 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
     return () => clearTimeout(id);
   }, [index, products.length]);
 
-  const product = products[index];
+  // The list can shrink between renders (a product archived while the page is
+  // open and refreshed), so never index past the end.
+  const product = products[index % products.length];
   const { min } = priceRangeFor(product);
+  const cheapest = product.sizes.find((s) => s.price === min);
+  const onSale = product.sizes.some((s) => isOnSale(s.price, s.compareAtPrice));
 
   return (
     <section className="border-t border-line bg-ink text-paper">
@@ -67,8 +73,11 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             >
               <p className="eyebrow text-gold">
+                {onSale && (
+                  <span className="mr-2 rounded-full bg-sale px-2.5 py-1 text-paper">Sale</span>
+                )}
                 {product.bestseller ? "Bestseller · " : ""}
-                {product.category}
+                {productTypeLabel(product)}
               </p>
               <h2 className="mt-4 text-3xl font-black leading-[0.95] tracking-tight sm:text-4xl md:text-6xl">
                 {product.fullName}
@@ -77,26 +86,35 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
                 {product.description}
               </p>
 
-              <dl className="mt-9 grid grid-cols-3 gap-4 border-t border-paper/15 pt-6 text-xs uppercase tracking-[0.14em] text-paper/65">
-                <div>
-                  <dt>Top</dt>
-                  <dd className="mt-2 normal-case tracking-normal text-paper/90">
-                    {product.notes.top.join(", ")}
-                  </dd>
+              {product.isSet ? (
+                <div className="mt-9 border-t border-paper/15 pt-6 text-xs uppercase tracking-[0.14em] text-paper/65">
+                  <p>What&apos;s inside</p>
+                  <p className="mt-2 normal-case tracking-normal text-paper/90">
+                    {(product.setItems ?? []).map((item) => `${item.name} (${item.size})`).join(" · ")}
+                  </p>
                 </div>
-                <div>
-                  <dt>Heart</dt>
-                  <dd className="mt-2 normal-case tracking-normal text-paper/90">
-                    {product.notes.heart.join(", ")}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Base</dt>
-                  <dd className="mt-2 normal-case tracking-normal text-paper/90">
-                    {product.notes.base.join(", ")}
-                  </dd>
-                </div>
-              </dl>
+              ) : (
+                <dl className="mt-9 grid grid-cols-3 gap-4 border-t border-paper/15 pt-6 text-xs uppercase tracking-[0.14em] text-paper/65">
+                  <div>
+                    <dt>Top</dt>
+                    <dd className="mt-2 normal-case tracking-normal text-paper/90">
+                      {product.notes.top.join(", ")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Heart</dt>
+                    <dd className="mt-2 normal-case tracking-normal text-paper/90">
+                      {product.notes.heart.join(", ")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Base</dt>
+                    <dd className="mt-2 normal-case tracking-normal text-paper/90">
+                      {product.notes.base.join(", ")}
+                    </dd>
+                  </div>
+                </dl>
+              )}
 
               <div className="mt-9 flex flex-wrap items-center gap-6">
                 <ButtonLink
@@ -105,6 +123,11 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
                 >
                   Shop from {formatPrice(min)}
                 </ButtonLink>
+                <StrikePrice
+                  price={min}
+                  compareAtPrice={cheapest?.compareAtPrice}
+                  className="text-lg font-semibold"
+                />
               </div>
             </motion.div>
           </AnimatePresence>

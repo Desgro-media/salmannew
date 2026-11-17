@@ -33,8 +33,11 @@ export function ShopGrid({
   initialType,
   initialBand,
   initialSort,
+  newArrivalIds,
 }: {
   products: Product[];
+  /** ids of the latest scents, newest first — what "New Arrivals" shows */
+  newArrivalIds: string[];
   initialFilter?: ShopFilter;
   initialType?: ShopType;
   initialBand?: PriceBand;
@@ -66,19 +69,19 @@ export function ShopGrid({
     const kept = products.filter(
       (p) =>
         matchesShopFilter(p, active) &&
-        matchesShopType(p, type) &&
+        matchesShopType(p, type, newArrivalIds) &&
         matchesPriceBand(p, band),
     );
 
-    // Featured is whatever order the catalogue came in, so it is the one sort
-    // that must not copy — the array is handed straight back.
+    // Featured is whatever order the catalogue came in — newest first — so it
+    // is the one sort that must not copy; the array is handed straight back.
     if (sort === "Featured") return kept;
 
     const direction = sort === "PriceAsc" ? 1 : -1;
     return [...kept].sort(
       (a, b) => (productFromPrice(a) - productFromPrice(b)) * direction,
     );
-  }, [products, active, type, band, sort]);
+  }, [products, active, type, band, sort, newArrivalIds]);
 
   const narrowed = type !== "All" || band !== "Any" || active !== "All";
 

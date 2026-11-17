@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Input";
 import { formatPrice } from "@/lib/format";
 import { PRODUCT_CATEGORIES, categoryLabel } from "@/lib/shop-filters";
+import { parseSetItems } from "@/lib/set-items";
 
 const CATEGORIES = PRODUCT_CATEGORIES;
 const CONCENTRATIONS = ["Eau de Parfum", "Eau de Toilette", "Parfum", "Eau de Cologne"] as const;
@@ -83,6 +84,8 @@ function UploadButton({
 
 interface SizeForm {
   id?: string;
+  /** a set's option name ("Gift Box"); single perfumes derive it from volumeMl */
+  label: string;
   volumeMl: string;
   sku: string;
   price: string;
@@ -108,10 +111,28 @@ interface ProductFormValues {
   bestseller: boolean;
   signature: boolean;
   isNew: boolean;
+  isSet: boolean;
+  setItems: SetItemForm[];
   sizes: SizeForm[];
 }
 
+interface SetItemForm {
+  name: string;
+  size: string;
+  /** "" when the item isn't a catalogue product */
+  productSlug: string;
+}
+
+const emptySetItem: SetItemForm = { name: "", size: "", productSlug: "" };
+
+export interface CatalogEntry {
+  slug: string;
+  name: string;
+  fullName: string;
+}
+
 const emptySize: SizeForm = {
+  label: "",
   volumeMl: "",
   sku: "",
   price: "",
@@ -137,6 +158,8 @@ const emptyValues: ProductFormValues = {
   bestseller: false,
   signature: false,
   isNew: false,
+  isSet: false,
+  setItems: [emptySetItem],
   sizes: [emptySize],
 };
 
@@ -157,6 +180,9 @@ export interface ProductFormInitial {
   bestseller: boolean;
   signature: boolean;
   isNew: boolean;
+  isSet: boolean;
+  /** the stored JSON column, parsed in fromInitial */
+  setItems: unknown;
   sizes: {
     id: string;
     label: string;
@@ -187,8 +213,18 @@ function fromInitial(initial: ProductFormInitial): ProductFormValues {
     bestseller: initial.bestseller,
     signature: initial.signature,
     isNew: initial.isNew,
+    isSet: initial.isSet,
+    setItems: (() => {
+      const items = parseSetItems(initial.setItems).map((item) => ({
+        name: item.name,
+        size: item.size,
+        productSlug: item.productSlug ?? "",
+      }));
+      return items.length > 0 ? items : [emptySetItem];
+    })(),
     sizes: initial.sizes.map((s) => ({
       id: s.id,
+      label: s.label,
       volumeMl: String(s.volumeMl),
       sku: s.sku,
       price: String(s.price),
@@ -211,9 +247,12 @@ async function uploadFile(file: File): Promise<string> {
 export function ProductForm({
   productId,
   initial,
+  catalog = [],
 }: {
   productId?: string;
   initial?: ProductFormInitial;
+  /** products a set's items can link to */
+  catalog?: CatalogEntry[];
 }) {
   const router = useRouter();
   const [values, setValues] = useState<ProductFormValues>(
@@ -233,6 +272,24 @@ export function ProductForm({
       ...v,
       sizes: v.sizes.map((s, i) => (i === index ? { ...s, ...patch } : s)),
     }));
+  }
+
+  function updateSetItem(index: number, patch: Partial<SetItemForm>) {
+    setValues((v) => ({
+      ...v,
+      setItems: v.setItems.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    }));
+  }
+
+  // Picking a catalogue product fills in the name, since that's almost always
+  // what the row should say; the admin can still edit it afterwards.
+  function handleSetItemLink(index: number, productSlug: string) {
+    const linked = catalog.find((p) => p.slug === productSlug);
+    const item = values.setItems[index];
+    updateSetItem(index, {
+      productSlug,
+      ...(linked && !item.name ? { name: linked.fullName } : {}),
+    });
   }
 
   function handleNameChange(name: string) {
@@ -293,6 +350,28 @@ export function ProductForm({
       return;
     }
 
+    const setItems = values.setItems
+      .map((item) => ({
+        name: item.name.trim(),
+        size: item.size.trim(),
+        productSlug: item.productSlug || undefined,
+      }))
+      .filter((item) => item.name || item.size);
+    if (values.isSet) {
+      if (setItems.length === 0) {
+        setError("List at least one item under \"What's inside the set\".");
+        return;
+      }
+      if (setItems.some((item) => !item.name || !item.size)) {
+        setError("Every item in the set needs both a name and a size (e.g. \"50 ml\").");
+        return;
+      }
+      if (values.sizes.some((s) => !s.label.trim())) {
+        setError("Give each set option a name, e.g. \"Gift Box\".");
+        return;
+      }
+    }
+
     const invalidDiscount = values.sizes.some(
       (s) => s.onSale && !discountSummary(s.price, s.compareAtPrice),
     );
@@ -322,11 +401,16 @@ export function ProductForm({
       bestseller: values.bestseller,
       signature: values.signature,
       isNew: values.isNew,
-      sizes: values.sizes.map((s) => ({
+      isSet: values.isSet,
+      setItems: values.isSet ? setItems : [],
+      sizes: values.sizes.map((s, i) => ({
         id: s.id,
-        label: `${s.volumeMl} ml`,
-        volumeMl: Number(s.volumeMl),
-        sku: s.sku,
+        // A set's options have no single volume. volumeMl still has to be a
+        // positive number (it orders the options), so it's the option's
+        // position: the first one listed is the one the page opens on.
+        label: values.isSet ? s.label.trim() : `${s.volumeMl} ml`,
+        volumeMl: values.isSet ? i + 1 : Number(s.volumeMl),
+        sku: s.sku || suggestSku(values.slug, values.isSet ? `SET${i + 1}` : s.volumeMl),
         price: Math.round(Number(s.price)),
         compareAtPrice: s.onSale && s.compareAtPrice ? Math.round(Number(s.compareAtPrice)) : undefined,
         image: s.image,
@@ -363,6 +447,34 @@ export function ProductForm({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <div className="space-y-6">
           <SectionCard step="01" title="Basics" description="What the product is called and how it's grouped.">
+            <div>
+              <span className="text-xs font-medium text-ink-soft">What are you adding?</span>
+              <div className="mt-1.5 grid grid-cols-2 border border-line text-xs font-semibold uppercase tracking-[0.08em]">
+                {(
+                  [
+                    [false, "Single perfume"],
+                    [true, "Gift set"],
+                  ] as const
+                ).map(([isSet, label]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={values.isSet === isSet}
+                    onClick={() => update("isSet", isSet)}
+                    className={`min-h-11 px-3 transition-colors ${
+                      values.isSet === isSet ? "bg-ink text-paper" : "hover:bg-paper-2"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {values.isSet && (
+                <p className="mt-2 text-xs text-ink-soft">
+                  Several items sold together at one price. You&apos;ll list what&apos;s inside the box under Story.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Field label="Product name" className="sm:col-span-2">
                 <Input
@@ -380,6 +492,10 @@ export function ProductForm({
                   placeholder="A short line shown under the name, e.g. Amber gold, worn like a crown."
                 />
               </Field>
+              {/* A set has no single scent family or concentration; the
+                  storefront labels it "Gift Set" wherever these would show. */}
+              {!values.isSet && (
+              <>
               <Field label="Category">
                 <select
                   required
@@ -408,6 +524,8 @@ export function ProductForm({
                   ))}
                 </select>
               </Field>
+              </>
+              )}
               <Field label="Brand color" className="sm:col-span-2">
                 <div className="mt-1.5 flex items-center gap-3">
                   <input
@@ -524,6 +642,67 @@ export function ProductForm({
                 placeholder="The longer story behind this scent."
               />
             </Field>
+            {values.isSet ? (
+              <div className="border-t border-line pt-5">
+                <p className="text-sm font-semibold">What&apos;s inside the set</p>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  One row per item in the box, in the order you want them shown. Link an item to a
+                  product you already sell and the set&apos;s page will link to it.
+                </p>
+                <div className="mt-4 space-y-3">
+                  {values.setItems.map((item, i) => (
+                    <div key={i} className="grid grid-cols-1 gap-3 border border-line p-3 sm:grid-cols-[1fr_7rem]">
+                      <Field label={`Item ${i + 1}`}>
+                        <Input
+                          value={item.name}
+                          onChange={(e) => updateSetItem(i, { name: e.target.value })}
+                          placeholder="me. Kiano"
+                        />
+                      </Field>
+                      <Field label="Size">
+                        <Input
+                          value={item.size}
+                          onChange={(e) => updateSetItem(i, { size: e.target.value })}
+                          placeholder="50 ml"
+                        />
+                      </Field>
+                      <div className="flex items-end gap-3 sm:col-span-2">
+                        <Field label="Links to (optional)" className="flex-1">
+                          <select
+                            value={item.productSlug}
+                            onChange={(e) => handleSetItemLink(i, e.target.value)}
+                            className="mt-1.5 min-h-11 w-full border border-line bg-transparent px-3.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
+                          >
+                            <option value="">Not sold separately</option>
+                            {catalog.map((p) => (
+                              <option key={p.slug} value={p.slug}>
+                                {p.fullName}
+                              </option>
+                            ))}
+                          </select>
+                        </Field>
+                        {values.setItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => update("setItems", values.setItems.filter((_, idx) => idx !== i))}
+                            className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.08em] text-red-700 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => update("setItems", [...values.setItems, emptySetItem])}
+                  className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.08em] hover:text-gold-ink md:min-h-0"
+                >
+                  + Add another item
+                </button>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <Field label="Top notes">
                 <Textarea
@@ -553,9 +732,18 @@ export function ProductForm({
                 <p className="mt-1 text-xs text-ink-soft">The lingering finish — lasts the longest.</p>
               </Field>
             </div>
+            )}
           </SectionCard>
 
-          <SectionCard step="04" title="Sizes, Prices &amp; Discounts" description="At least one size is required.">
+          <SectionCard
+            step="04"
+            title={values.isSet ? "Price & Discounts" : "Sizes, Prices & Discounts"}
+            description={
+              values.isSet
+                ? "Usually one option. Add more only if you sell the set in more than one version."
+                : "At least one size is required."
+            }
+          >
             <div className="space-y-5">
               {values.sizes.map((size, i) => {
                 const summary = size.onSale ? discountSummary(size.price, size.compareAtPrice) : null;
@@ -563,7 +751,7 @@ export function ProductForm({
                   <div key={i} className="border border-line">
                     <div className="flex items-center justify-between border-b border-line bg-paper-2 px-4 py-2">
                       <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft">
-                        Size {i + 1}
+                        {values.isSet ? `Option ${i + 1}` : `Size ${i + 1}`}
                       </span>
                       {values.sizes.length > 1 && (
                         <button
@@ -577,15 +765,26 @@ export function ProductForm({
                     </div>
                     <div className="p-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <Field label="Size (ml)">
-                          <Input
-                            required
-                            type="number"
-                            value={size.volumeMl}
-                            onChange={(e) => handleVolumeChange(i, e.target.value)}
-                            placeholder="30"
-                          />
-                        </Field>
+                        {values.isSet ? (
+                          <Field label="Option name">
+                            <Input
+                              required
+                              value={size.label}
+                              onChange={(e) => updateSize(i, { label: e.target.value })}
+                              placeholder="Gift Box"
+                            />
+                          </Field>
+                        ) : (
+                          <Field label="Size (ml)">
+                            <Input
+                              required
+                              type="number"
+                              value={size.volumeMl}
+                              onChange={(e) => handleVolumeChange(i, e.target.value)}
+                              placeholder="30"
+                            />
+                          </Field>
+                        )}
                         <Field label="Price (₹) — what customers pay">
                           <Input
                             required
@@ -609,7 +808,9 @@ export function ProductForm({
                               })
                             }
                           />
-                          This size is on sale (apply a discount)
+                          {values.isSet
+                            ? "This set is on sale (apply a discount)"
+                            : "This size is on sale (apply a discount)"}
                         </label>
                         {size.onSale && (
                           <div className="mt-3">
@@ -664,12 +865,13 @@ export function ProductForm({
               onClick={() =>
                 update("sizes", [
                   ...values.sizes,
-                  { ...emptySize, sku: suggestSku(values.slug, "") },
+                  // A set's SKU is filled on save from its position (…-SET2).
+                  { ...emptySize, sku: values.isSet ? "" : suggestSku(values.slug, "") },
                 ])
               }
               className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.08em] hover:text-gold-ink md:min-h-0"
             >
-              + Add another size
+              {values.isSet ? "+ Add another option" : "+ Add another size"}
             </button>
           </SectionCard>
         </div>

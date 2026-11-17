@@ -84,6 +84,23 @@ export function AddToCartPanel({ product }: { product: Product }) {
         </div>
       </div>
 
+      {/* Switched off in the admin (typically out of stock). The page stays up so
+          a shared link doesn't 404, but there is nothing to add to the bag. The
+          order API refuses these too, for carts filled before the switch-off. */}
+      {product.available === false ? (
+        <div className="mt-8">
+          <button
+            type="button"
+            disabled
+            className="w-full cursor-not-allowed rounded-full bg-paper-2 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft"
+          >
+            Out of Stock
+          </button>
+          <p className="mt-3 text-xs text-ink-soft">
+            This one is unavailable right now. Check back soon.
+          </p>
+        </div>
+      ) : (
       <div className="mt-8 flex items-stretch gap-3">
         <div className="flex items-center gap-1 rounded-full border border-line px-1.5">
           <button
@@ -123,6 +140,7 @@ export function AddToCartPanel({ product }: { product: Product }) {
           </AnimatePresence>
         </button>
       </div>
+      )}
     </div>
   );
 }

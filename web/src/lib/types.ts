@@ -21,6 +21,15 @@ export interface ProductSize {
   thumb: string;
 }
 
+/** One thing inside a gift set, as listed on its product page. */
+export interface SetItem {
+  name: string;
+  /** free text: "50 ml", "3 ml attar", "25 g" */
+  size: string;
+  /** set when the item is also sold on its own, so the page can link to it */
+  productSlug?: string;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -38,6 +47,11 @@ export interface Product {
   bestseller?: boolean;
   signature?: boolean;
   isNew?: boolean;
+  /** a gift set: several items sold together under one price */
+  isSet?: boolean;
+  setItems?: SetItem[];
+  /** false when the admin has switched the product off (e.g. out of stock) */
+  available?: boolean;
 }
 
 export interface CartLine {

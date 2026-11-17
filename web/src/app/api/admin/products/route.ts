@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { productInputSchema } from "@/lib/admin-schema";
+import { productCreateSchema } from "@/lib/admin-schema";
 import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
 import { revalidateStorefront } from "@/lib/revalidate";
 
@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const json = await request.json();
-  const parsed = productInputSchema.safeParse(json);
+  const parsed = productCreateSchema.safeParse(json);
 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

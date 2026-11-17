@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/format";
 import { cutoutSrc } from "@/lib/product-image";
 import { wellSurface } from "@/lib/product-well";
 import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
-import { categoryLabel } from "@/lib/shop-filters";
+import { productTypeLabel } from "@/lib/shop-filters";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { useHasMounted } from "@/lib/use-has-mounted";
@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
     ? "Popular"
     : product.isNew
       ? "New"
-      : categoryLabel(product.category);
+      : productTypeLabel(product);
 
   function handleAdd() {
     addItem({
