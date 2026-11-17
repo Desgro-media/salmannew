@@ -46,7 +46,7 @@ export default async function ProductPage({
 
   const settings = await getStoreSettings();
 
-  const related = await getRelatedProducts(slug, 3);
+  const related = await getRelatedProducts(product, 3);
 
   // The size the page opens on, and so the price a visitor sees first.
   const openingSize = product.sizes[0];

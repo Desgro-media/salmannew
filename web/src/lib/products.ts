@@ -99,12 +99,44 @@ export async function getProductBySlug(slug: string): Promise<Product | undefine
   return row ? toProduct(row) : undefined;
 }
 
-export async function getRelatedProducts(slug: string, count = 3): Promise<Product[]> {
-  const rows = await prisma.product.findMany({
-    where: { ...LISTED, slug: { not: slug } },
-    include: productWithSizes.include,
-    orderBy: { createdAt: "asc" },
-    take: count,
-  });
-  return rows.map(toProduct);
+// "You might also like". This used to be the first three products by creation
+// date, so every product page recommended the same three. Now it is ranked per
+// product:
+//   1. the same scent family (a Musk suggests other Musks);
+//   2. the same line (me. or Privé);
+//   3. everything else, with gift sets last.
+// A gift set page is the other way round: other sets first, then scents.
+//
+// Within a rank, candidates are taken in catalogue order starting just after the
+// product being viewed and wrapping round. That keeps the choice stable (the
+// page is cached, so it must not be random) while giving each product its own
+// neighbours instead of one shared list.
+export async function getRelatedProducts(
+  current: Pick<Product, "slug" | "category" | "isSet">,
+  count = 3,
+): Promise<Product[]> {
+  const all = await getProductsNewestFirst();
+  const start = Math.max(
+    0,
+    all.findIndex((p) => p.slug === current.slug),
+  );
+  const isPrive = (p: Pick<Product, "category">) => p.category === "Prive";
+
+  const rank = (p: Product): number => {
+    if (current.isSet) return p.isSet ? 0 : 1;
+    if (p.isSet) return 3;
+    if (p.category === current.category) return 0;
+    return isPrive(p) === isPrive(current) ? 1 : 2;
+  };
+
+  return all
+    .map((product, index) => ({
+      product,
+      rank: rank(product),
+      distance: (index - start + all.length) % all.length,
+    }))
+    .filter(({ product }) => product.slug !== current.slug)
+    .sort((a, b) => a.rank - b.rank || a.distance - b.distance)
+    .slice(0, count)
+    .map(({ product }) => product);
 }
