@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
 import { formatPrice } from "@/lib/format";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
+import { ProductActiveToggle } from "@/components/admin/ProductActiveToggle";
+import { categoryLabel } from "@/lib/shop-filters";
 
 function priceRange(sizes: { price: number }[]): { min: number; max: number } {
   const prices = sizes.map((s) => s.price);
@@ -87,6 +89,7 @@ export default async function AdminProductsPage() {
               <th className="py-3 pr-4 font-medium">Category</th>
               <th className="py-3 pr-4 font-medium">Price</th>
               <th className="py-3 pr-4 font-medium">Status</th>
+              <th className="py-3 pr-4 font-medium">For sale</th>
               <th className="py-3 pr-4 font-medium">Buyers</th>
               <th className="py-3 pr-4 font-medium">Units Sold</th>
               <th className="py-3 pr-4 font-medium"></th>
@@ -95,7 +98,7 @@ export default async function AdminProductsPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-ink-soft">
+                <td colSpan={8} className="py-12 text-center text-ink-soft">
                   No products yet —{" "}
                   <Link href="/admin/products/new" className="text-gold-ink hover:underline">
                     add your first one
@@ -122,7 +125,7 @@ export default async function AdminProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 pr-4 text-ink-soft">{row.category}</td>
+                    <td className="py-3 pr-4 text-ink-soft">{row.isSet ? "Gift Set" : categoryLabel(row.category)}</td>
                     <td className="py-3 pr-4">
                       {min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`}
                     </td>
@@ -139,6 +142,13 @@ export default async function AdminProductsPage() {
                       >
                         {row.isArchived ? "Archived" : row.bestseller ? "Bestseller" : row.isNew ? "New" : "Active"}
                       </span>
+                    </td>
+                    <td className="py-3 pr-4">
+                      {row.isArchived ? (
+                        <span className="text-xs text-ink-soft">—</span>
+                      ) : (
+                        <ProductActiveToggle productId={row.id} productName={row.name} active={row.isActive} />
+                      )}
                     </td>
                     <td className="py-3 pr-4">{s.uniqueBuyerCount}</td>
                     <td className="py-3 pr-4">{s.totalUnitsSold}</td>
@@ -213,6 +223,16 @@ export default async function AdminProductsPage() {
                               ? "New"
                               : "Active"}
                       </span>
+                      {row.isSet && (
+                        <span className="ml-1.5 mt-2 inline-block bg-paper-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-ink-soft">
+                          Gift Set
+                        </span>
+                      )}
+                      {!row.isArchived && (
+                        <div className="mt-1">
+                          <ProductActiveToggle productId={row.id} productName={row.name} active={row.isActive} />
+                        </div>
+                      )}
                     </div>
                   </div>
 

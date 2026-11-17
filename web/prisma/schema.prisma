@@ -81,6 +81,15 @@ model Product {
   signature     Boolean       @default(false)
   isNew         Boolean       @default(false)
   isArchived    Boolean       @default(false)
+  // Off = taken off sale (e.g. out of stock): hidden from the shop and the
+  // homepage, and its page can't be bought from. Unlike isArchived, the admin
+  // flips this back on whenever stock returns.
+  isActive      Boolean       @default(true)
+  // A gift set sells several items under one price. setItems lists what's in
+  // the box as [{ name, size, productSlug? }] — free text, because a set can
+  // hold things that aren't catalogue products (oud chips, attar rollers).
+  isSet         Boolean       @default(false)
+  setItems      Json          @default("[]")
   sizes         ProductSize[]
   orderItems    OrderItem[]
   reviews       Review[]

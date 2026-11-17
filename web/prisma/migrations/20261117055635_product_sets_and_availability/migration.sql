@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "isSet" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "setItems" JSONB NOT NULL DEFAULT '[]';

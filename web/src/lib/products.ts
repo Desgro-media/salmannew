@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import type { Product } from "./types";
+import { parseSetItems } from "./set-items";
 
 // Archived sizes are withheld from every storefront read: a retired size still
 // has to exist for the orders that reference it, but must not be offered for
@@ -8,6 +9,11 @@ import type { Product } from "./types";
 const productWithSizes = Prisma.validator<Prisma.ProductDefaultArgs>()({
   include: { sizes: { where: { isArchived: false }, orderBy: { volumeMl: "asc" } } },
 });
+
+// What the shop lists: not archived, and not switched off in the admin. The
+// product page itself still loads a switched-off product (by slug, below) so a
+// shared link shows "out of stock" rather than a 404.
+const LISTED = { isArchived: false, isActive: true } satisfies Prisma.ProductWhereInput;
 
 type ProductRow = Prisma.ProductGetPayload<typeof productWithSizes>;
 
@@ -42,12 +48,15 @@ function toProduct(row: ProductRow): Product {
     bestseller: row.bestseller,
     signature: row.signature,
     isNew: row.isNew,
+    isSet: row.isSet,
+    setItems: row.isSet ? parseSetItems(row.setItems) : [],
+    available: row.isActive,
   };
 }
 
 export async function getAllProducts(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { isArchived: false },
+    where: LISTED,
     include: productWithSizes.include,
     orderBy: { createdAt: "asc" },
   });
@@ -61,7 +70,7 @@ export async function getAllProducts(): Promise<Product[]> {
 // and rows seeded in one batch can share a createdAt.
 export async function getProductsNewestFirst(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { isArchived: false },
+    where: LISTED,
     include: productWithSizes.include,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
@@ -74,7 +83,7 @@ export const NEW_ARRIVALS_COUNT = 8;
 
 export async function getNewArrivals(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { isArchived: false },
+    where: LISTED,
     include: productWithSizes.include,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: NEW_ARRIVALS_COUNT,
@@ -92,7 +101,7 @@ export async function getProductBySlug(slug: string): Promise<Product | undefine
 
 export async function getRelatedProducts(slug: string, count = 3): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { slug: { not: slug }, isArchived: false },
+    where: { ...LISTED, slug: { not: slug } },
     include: productWithSizes.include,
     orderBy: { createdAt: "asc" },
     take: count,
