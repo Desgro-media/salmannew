@@ -33,7 +33,7 @@ export function categoryLabel(category: string): string {
 // are what a visitor is actually choosing between, and nine chips scrolling off
 // the edge hid that. The families stay in PRODUCT_CATEGORIES, where the admin
 // form and the badge on a product card still use them.
-export const SHOP_FILTERS = ["All", "Me", "Prive"] as const;
+export const SHOP_FILTERS = ["All", "Me", "Prive", "Sets"] as const;
 
 export type ShopFilter = (typeof SHOP_FILTERS)[number];
 
@@ -41,6 +41,7 @@ const FILTER_LABELS: Record<ShopFilter, string> = {
   All: "All",
   Me: "me.",
   Prive: "Privé",
+  Sets: "Gift Sets",
 };
 
 export function shopFilterLabel(filter: ShopFilter): string {
@@ -50,13 +51,23 @@ export function shopFilterLabel(filter: ShopFilter): string {
 // `me.` is defined as "not Privé" rather than as a stored flag of its own: the
 // two lines exhaust the catalogue, so a scent added under a new family lands in
 // `me.` without anyone having to remember to update this.
+//
+// A gift set belongs to neither line — it mixes them — so it only shows under
+// All and its own Gift Sets chip, whatever category happens to be stored on it.
 export function matchesShopFilter(
-  product: { category: string },
+  product: { category: string; isSet?: boolean },
   filter: ShopFilter,
 ): boolean {
   if (filter === "All") return true;
+  if (filter === "Sets") return product.isSet === true;
+  if (product.isSet) return false;
   if (filter === "Prive") return product.category === "Prive";
   return product.category !== "Prive";
+}
+
+/** The label a product's category shows as on cards and its page. */
+export function productTypeLabel(product: { category: string; isSet?: boolean }): string {
+  return product.isSet ? "Gift Set" : categoryLabel(product.category);
 }
 
 // The second axis, crossed with the line chips above. Kept as short tokens
