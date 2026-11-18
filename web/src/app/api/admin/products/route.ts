@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { productCreateSchema } from "@/lib/admin-schema";
-import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
+import { EMPTY_PURCHASE_STATS, getPurchaseStatsByProduct } from "@/lib/purchase-stats";
 import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET() {
@@ -16,7 +16,7 @@ export async function GET() {
   return NextResponse.json(
     products.map((product) => ({
       ...product,
-      ...(stats.get(product.id) ?? { uniqueBuyerCount: 0, totalUnitsSold: 0 }),
+      ...(stats.get(product.id) ?? EMPTY_PURCHASE_STATS),
     })),
   );
 }

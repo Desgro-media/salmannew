@@ -1,10 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getPurchaseStatsForProduct } from "@/lib/purchase-stats";
+import { getPurchaseStatsForProduct, SOLD_ORDER_FILTER } from "@/lib/purchase-stats";
 import { formatPrice } from "@/lib/format";
 
 const PAGE_SIZE = 20;
+
+/** Only sold orders are listed here, so an online order is always paid and a COD one is either delivered or on its way. */
+function paymentLine(method: string, status: string): { how: string; state: string } {
+  if (method === "COD") {
+    return { how: "Cash on delivery", state: status === "PAID" ? "Cash collected" : "Cash to collect" };
+  }
+  return { how: "Online", state: "Paid" };
+}
 
 export default async function ProductPurchasersPage({
   params,
@@ -22,9 +30,9 @@ export default async function ProductPurchasersPage({
 
   const [stats, total, orderItems] = await Promise.all([
     getPurchaseStatsForProduct(id),
-    prisma.orderItem.count({ where: { productId: id } }),
+    prisma.orderItem.count({ where: { productId: id, order: SOLD_ORDER_FILTER } }),
     prisma.orderItem.findMany({
-      where: { productId: id },
+      where: { productId: id, order: SOLD_ORDER_FILTER },
       include: { order: true },
       orderBy: { order: { createdAt: "desc" } },
       skip: (page - 1) * PAGE_SIZE,
@@ -50,10 +58,19 @@ export default async function ProductPurchasersPage({
           <p className="text-3xl font-black">{stats.totalUnitsSold}</p>
           <p className="text-xs uppercase tracking-[0.1em] text-ink-soft">Units Sold</p>
         </div>
+        <div>
+          <p className="text-3xl font-black">{formatPrice(stats.totalRevenue)}</p>
+          <p className="text-xs uppercase tracking-[0.1em] text-ink-soft">Revenue</p>
+        </div>
       </div>
+      <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-soft">
+        Revenue is the sum of each row&rsquo;s Price &times; Qty below. Abandoned or failed
+        checkouts, refunded orders and cancelled orders are not counted, and shipping and COD
+        fees are not part of it.
+      </p>
 
       <div className="mt-8 overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
+        <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-[0.1em] text-ink-soft">
               <th className="py-3 pr-4 font-medium">Order #</th>
@@ -62,13 +79,15 @@ export default async function ProductPurchasersPage({
               <th className="py-3 pr-4 font-medium">Size</th>
               <th className="py-3 pr-4 font-medium">Qty</th>
               <th className="py-3 pr-4 font-medium">Price</th>
+              <th className="py-3 pr-4 font-medium">Amount</th>
+              <th className="py-3 pr-4 font-medium">Payment</th>
               <th className="py-3 pr-4 font-medium">Date</th>
             </tr>
           </thead>
           <tbody>
             {orderItems.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-ink-soft">
+                <td colSpan={9} className="py-8 text-center text-ink-soft">
                   No purchases yet.
                 </td>
               </tr>
@@ -84,6 +103,13 @@ export default async function ProductPurchasersPage({
                   <td className="py-3 pr-4">{item.sizeLabel}</td>
                   <td className="py-3 pr-4">{item.quantity}</td>
                   <td className="py-3 pr-4">{formatPrice(item.price)}</td>
+                  <td className="py-3 pr-4 font-semibold">{formatPrice(item.price * item.quantity)}</td>
+                  <td className="py-3 pr-4">
+                    <div>{paymentLine(item.order.paymentMethod, item.order.paymentStatus).how}</div>
+                    <div className="text-xs text-ink-soft">
+                      {paymentLine(item.order.paymentMethod, item.order.paymentStatus).state}
+                    </div>
+                  </td>
                   <td className="py-3 pr-4 text-ink-soft">
                     {item.order.createdAt.toLocaleDateString("en-IN", {
                       day: "numeric",
