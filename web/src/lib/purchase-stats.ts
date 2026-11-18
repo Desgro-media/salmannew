@@ -115,47 +115,125 @@ export async function getSalesLinesByProduct(): Promise<Map<string, SalesLine[]>
   return byProduct;
 }
 
-export interface SalesSummary {
-  /** Orders that passed SOLD_ORDER_FILTER — the ones every figure is built from. */
-  ordersCounted: number;
-  /** Delivery charged across those orders. Order-level, so not in product revenue. */
-  shipping: number;
-  /** Cash-on-delivery handling fees across those orders. Also order-level. */
-  codFees: number;
-  /** What those orders billed in full: product revenue + shipping + COD fees. */
-  totalBilled: number;
-  /** Orders left out, by why. Together with `ordersCounted` this is every order. */
-  notCounted: { notPaid: number; refunded: number; cancelled: number };
+/** Orders left out of the sales figures, by why. */
+export interface NotCountedOrders {
+  notPaid: number;
+  refunded: number;
+  cancelled: number;
 }
 
-export async function getSalesSummary(): Promise<SalesSummary> {
-  const [sold, byState] = await Promise.all([
-    prisma.order.aggregate({
-      where: SOLD_ORDER_FILTER,
-      _count: { _all: true },
-      _sum: { shipping: true, codFee: true, total: true },
-    }),
-    prisma.order.groupBy({ by: ["status", "paymentStatus"], _count: { _all: true } }),
-  ]);
+export async function getNotCountedOrders(): Promise<NotCountedOrders> {
+  const byState = await prisma.order.groupBy({
+    by: ["status", "paymentStatus"],
+    _count: { _all: true },
+  });
 
   // Each leftover order is filed under exactly one reason, refund first, so the
   // three numbers never add up to more than the orders that were left out. This
   // is the complement of SOLD_ORDER_FILTER — change one, change the other.
-  const notCounted = { notPaid: 0, refunded: 0, cancelled: 0 };
+  const notCounted: NotCountedOrders = { notPaid: 0, refunded: 0, cancelled: 0 };
   for (const group of byState) {
     const n = group._count._all;
     if (group.paymentStatus === "REFUNDED") notCounted.refunded += n;
     else if (group.paymentStatus === "PENDING" || group.paymentStatus === "FAILED") notCounted.notPaid += n;
     else if (group.status === "CANCELLED") notCounted.cancelled += n;
   }
+  return notCounted;
+}
 
-  return {
-    ordersCounted: sold._count._all,
-    shipping: sold._sum.shipping ?? 0,
-    codFees: sold._sum.codFee ?? 0,
-    totalBilled: sold._sum.total ?? 0,
-    notCounted,
-  };
+/** Orders, units and rupees for one slice of the sold orders. */
+export interface PaymentBucket {
+  orders: number;
+  units: number;
+  /** The goods themselves: each line's price × quantity. */
+  products: number;
+  /** Delivery charged. Belongs to the order, not to any product. */
+  shipping: number;
+  /** Cash-on-delivery handling fee. Likewise order-level. */
+  codFees: number;
+  /** What these orders billed in full — products + shipping + COD fees. */
+  total: number;
+}
+
+export interface PaymentBreakdown {
+  /** Paid online. The money is already in. */
+  online: PaymentBucket;
+  /** Cash on delivery that has been delivered, so the cash has changed hands. */
+  codCollected: PaymentBucket;
+  /** Cash on delivery placed but not yet delivered: cash still to collect. */
+  codToCollect: PaymentBucket;
+  /** codCollected + codToCollect. */
+  cod: PaymentBucket;
+  /** online + cod: every sold order. */
+  overall: PaymentBucket;
+  /** Units per product by how they were paid for, for the sold-products list. */
+  unitsByProduct: Map<string, { online: number; cod: number }>;
+}
+
+function emptyBucket(): PaymentBucket {
+  return { orders: 0, units: 0, products: 0, shipping: 0, codFees: 0, total: 0 };
+}
+
+function sumBuckets(...buckets: PaymentBucket[]): PaymentBucket {
+  const sum = emptyBucket();
+  for (const b of buckets) {
+    sum.orders += b.orders;
+    sum.units += b.units;
+    sum.products += b.products;
+    sum.shipping += b.shipping;
+    sum.codFees += b.codFees;
+    sum.total += b.total;
+  }
+  return sum;
+}
+
+/**
+ * The sold orders split by how they were paid, so the owner can see what has
+ * actually arrived versus what is still on a courier's lap.
+ *
+ * An online order in the sold set is always PAID. A cash-on-delivery order is
+ * COD_PENDING until delivery and PAID afterwards (codPaymentChange in cod.ts), so
+ * its payment status is exactly "has the cash been collected".
+ */
+export async function getPaymentBreakdown(): Promise<PaymentBreakdown> {
+  const orders = await prisma.order.findMany({
+    where: SOLD_ORDER_FILTER,
+    select: {
+      paymentMethod: true,
+      paymentStatus: true,
+      shipping: true,
+      codFee: true,
+      total: true,
+      items: { select: { productId: true, quantity: true, price: true } },
+    },
+  });
+
+  const online = emptyBucket();
+  const codCollected = emptyBucket();
+  const codToCollect = emptyBucket();
+  const unitsByProduct = new Map<string, { online: number; cod: number }>();
+
+  for (const order of orders) {
+    const isCod = order.paymentMethod === "COD";
+    const bucket = !isCod ? online : order.paymentStatus === "PAID" ? codCollected : codToCollect;
+
+    bucket.orders += 1;
+    bucket.shipping += order.shipping;
+    bucket.codFees += order.codFee;
+    bucket.total += order.total;
+
+    for (const item of order.items) {
+      bucket.units += item.quantity;
+      bucket.products += item.price * item.quantity;
+
+      const split = unitsByProduct.get(item.productId) ?? { online: 0, cod: 0 };
+      split[isCod ? "cod" : "online"] += item.quantity;
+      unitsByProduct.set(item.productId, split);
+    }
+  }
+
+  const cod = sumBuckets(codCollected, codToCollect);
+  return { online, codCollected, codToCollect, cod, overall: sumBuckets(online, cod), unitsByProduct };
 }
 
 export async function getPurchaseStatsForProduct(productId: string): Promise<ProductPurchaseStats> {

@@ -5,8 +5,9 @@ import { prisma } from "@/lib/db";
 import {
   EMPTY_PURCHASE_STATS,
   getPurchaseStatsByProduct,
+  getNotCountedOrders,
+  getPaymentBreakdown,
   getSalesLinesByProduct,
-  getSalesSummary,
 } from "@/lib/purchase-stats";
 import { formatPrice } from "@/lib/format";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
@@ -22,7 +23,7 @@ function priceRange(sizes: { price: number }[]): { min: number; max: number } {
 export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage() {
-  const [rows, stats, salesLines, salesSummary] = await Promise.all([
+  const [rows, stats, salesLines, payments, notCounted] = await Promise.all([
     prisma.product.findMany({
       // Archived sizes are excluded so the price range shown here (and the
       // Edit form it links to) reflects only what's actually for sale — an
@@ -33,7 +34,8 @@ export default async function AdminProductsPage() {
     }),
     getPurchaseStatsByProduct(),
     getSalesLinesByProduct(),
-    getSalesSummary(),
+    getPaymentBreakdown(),
+    getNotCountedOrders(),
   ]);
 
   const totals = rows.reduce(
@@ -52,11 +54,14 @@ export default async function AdminProductsPage() {
   const soldProducts: SoldProduct[] = rows
     .map((row) => {
       const s = stats.get(row.id) ?? EMPTY_PURCHASE_STATS;
+      const split = payments.unitsByProduct.get(row.id) ?? { online: 0, cod: 0 };
       return {
         id: row.id,
         name: row.name,
         image: row.images[0],
         units: s.totalUnitsSold,
+        online: split.online,
+        cod: split.cod,
         revenue: s.totalRevenue,
         lines: salesLines.get(row.id) ?? [],
       };
@@ -102,16 +107,22 @@ export default async function AdminProductsPage() {
           <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-ink-soft sm:text-xs">
             Units Sold
           </p>
+          <p className="mt-1 text-[10px] leading-snug text-ink-soft sm:text-xs">
+            {payments.online.units} online &middot; {payments.cod.units} COD
+          </p>
         </div>
         <div className="bg-paper px-3 py-4 sm:px-6 sm:py-5">
           <p className="text-xl font-black sm:text-2xl">{formatPrice(totals.revenue)}</p>
           <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-ink-soft sm:text-xs">
             Revenue
           </p>
+          <p className="mt-1 text-[10px] leading-snug text-ink-soft sm:text-xs">
+            {formatPrice(payments.online.products)} online &middot; {formatPrice(payments.cod.products)} COD
+          </p>
         </div>
       </div>
 
-      <SalesBreakdown products={soldProducts} totalRevenue={totals.revenue} summary={salesSummary} />
+      <SalesBreakdown products={soldProducts} payments={payments} notCounted={notCounted} />
 
       <h2 className="mt-10 text-xl font-black tracking-tight">All products</h2>
 

@@ -44,6 +44,8 @@ export async function GET(
       quantity: item.quantity,
       price: item.price,
       amount: item.price * item.quantity,
+      paymentMethod: item.order.paymentMethod,
+      paymentStatus: item.order.paymentStatus,
       purchasedAt: item.order.createdAt,
     })),
   });
