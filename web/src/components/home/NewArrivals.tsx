@@ -36,6 +36,10 @@ export async function NewArrivals() {
       <div className="mt-10 sm:mt-14">
         <HorizontalScroller>
           {products.map((product, i) => {
+            // The thumbnail is that size's own photo, the same one the shop grid
+            // shows, so the card matches the "From" price beside it. The gallery's
+            // first photo can be a lifestyle shot that suits the product page but
+            // not a small square card.
             const cheapest = [...product.sizes].sort((a, b) => a.price - b.price)[0];
             return (
               <Reveal key={product.id} delay={(i % 3) * 0.06} className="flex w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
@@ -54,7 +58,7 @@ export async function NewArrivals() {
                     </span>
                     <div className="absolute inset-[13%]">
                       <Image
-                        src={cutoutSrc(product.images[0])}
+                        src={cutoutSrc(cheapest.image || product.images[0])}
                         alt={product.fullName}
                         fill
                         draggable={false}
