@@ -9,6 +9,7 @@ import { priceRangeFor } from "@/lib/price";
 import { formatPrice } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/Button";
 import { cutoutSrc } from "@/lib/product-image";
+import { spotlightGlow } from "@/lib/product-well";
 import { productTypeLabel } from "@/lib/shop-filters";
 import { StrikePrice, isOnSale } from "@/components/product/StrikePrice";
 
@@ -46,6 +47,14 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
                 transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute inset-0"
               >
+                {/* A soft light in the product's own colour behind the bottle. It
+                    sits inside this keyed block, so it fades out and in with the
+                    product rather than snapping to the next colour. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0"
+                  style={{ background: spotlightGlow(product.accent) }}
+                />
                 {/* The size's own photo (the one "Shop from ₹…" refers to), as on
                     the card rows. The gallery's first photo can be a lifestyle
                     shot on a white backdrop, which looks like a pale block on
