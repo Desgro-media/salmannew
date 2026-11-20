@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getAllProducts } from "@/lib/products";
+import Image from "next/image";
+import { getNewArrivals, getProductsNewestFirst } from "@/lib/products";
 import { Marquee } from "@/components/layout/Marquee";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import {
@@ -24,7 +25,11 @@ export default async function ShopPage({
     sort?: string;
   }>;
 }) {
-  const [products, params] = await Promise.all([getAllProducts(), searchParams]);
+  const [products, newArrivals, params] = await Promise.all([
+    getProductsNewestFirst(),
+    getNewArrivals(),
+    searchParams,
+  ]);
 
   // Matched against the allowed values rather than cast: these arrive from a
   // URL anyone can edit, and an unknown one should open the shop on its
@@ -41,12 +46,24 @@ export default async function ShopPage({
           looping continuously. Repeating it keeps the row at least as wide
           as the screen. */}
       <Marquee items={Array(20).fill("Salman Perfumes")} />
-      <div className="container-grid border-b border-line py-14 md:py-20">
-        <p className="eyebrow text-ink-soft">Shop</p>
-        <h1 className="mt-3 text-5xl font-black tracking-tight md:text-7xl">
-          All Scents
-        </h1>
-      </div>
+      {/* The banner art carries its own headline ("Find Your Scent…") on the
+          left, so the page title stays in the DOM for screen readers and
+          search but isn't drawn over it. Below md the box is a taller 2:1 and
+          the image is anchored left, which keeps both the copy and the
+          bottles in frame instead of letting a 3:1 strip shrink the text to
+          nothing; from md up it follows the image's own ratio, capped so it
+          doesn't take over the screen on very wide monitors. */}
+      <section className="relative aspect-[2/1] w-full overflow-hidden border-b border-line md:aspect-[3000/1013] lg:max-h-[640px]">
+        <h1 className="sr-only">All Scents</h1>
+        <Image
+          src="/hero/shop-banner.jpg"
+          alt="The me. collection: Oud, Love and Sweet eaux de parfum on a sandstone arch"
+          fill
+          preload
+          sizes="100vw"
+          className="object-cover object-[20%_center] md:object-center"
+        />
+      </section>
 
       <div className="container-grid py-12 md:py-16">
         {/* ShopGrid seeds its state from the initial* props once, on mount. The
@@ -57,6 +74,7 @@ export default async function ShopPage({
         <ShopGrid
           key={`${initialFilter}|${initialType}|${initialBand}|${initialSort}`}
           products={products}
+          newArrivalIds={newArrivals.map((p) => p.id)}
           initialFilter={initialFilter}
           initialType={initialType}
           initialBand={initialBand}

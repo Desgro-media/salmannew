@@ -66,6 +66,17 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    // A cart can outlive the product being switched off (out of stock) or
+    // retired, so the bag may still hold it; the order must not go through.
+    const size = sizeById.get(item.sizeId)!;
+    if (!size.product.isActive || size.product.isArchived || size.isArchived) {
+      return NextResponse.json(
+        {
+          error: `${size.product.name} (${size.label}) is currently out of stock. Please remove it from your bag to continue.`,
+        },
+        { status: 409 },
+      );
+    }
   }
 
   const subtotal = items.reduce((sum, item) => {

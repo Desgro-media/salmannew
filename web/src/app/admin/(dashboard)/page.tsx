@@ -2,9 +2,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { clsx } from "clsx";
 import { prisma } from "@/lib/db";
-import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
+import {
+  EMPTY_PURCHASE_STATS,
+  getPurchaseStatsByProduct,
+  getNotCountedOrders,
+  getPaymentBreakdown,
+  getSalesLinesByProduct,
+} from "@/lib/purchase-stats";
 import { formatPrice } from "@/lib/format";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
+import { SalesBreakdown, type SoldProduct } from "@/components/admin/SalesBreakdown";
+import { ProductActiveToggle } from "@/components/admin/ProductActiveToggle";
+import { categoryLabel } from "@/lib/shop-filters";
 
 function priceRange(sizes: { price: number }[]): { min: number; max: number } {
   const prices = sizes.map((s) => s.price);
@@ -14,7 +23,7 @@ function priceRange(sizes: { price: number }[]): { min: number; max: number } {
 export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage() {
-  const [rows, stats] = await Promise.all([
+  const [rows, stats, salesLines, payments, notCounted] = await Promise.all([
     prisma.product.findMany({
       // Archived sizes are excluded so the price range shown here (and the
       // Edit form it links to) reflects only what's actually for sale — an
@@ -24,17 +33,41 @@ export default async function AdminProductsPage() {
       orderBy: { createdAt: "desc" },
     }),
     getPurchaseStatsByProduct(),
+    getSalesLinesByProduct(),
+    getPaymentBreakdown(),
+    getNotCountedOrders(),
   ]);
 
   const totals = rows.reduce(
     (acc, row) => {
-      const s = stats.get(row.id) ?? { uniqueBuyerCount: 0, totalUnitsSold: 0 };
+      const s = stats.get(row.id) ?? EMPTY_PURCHASE_STATS;
       acc.buyers += s.uniqueBuyerCount;
       acc.units += s.totalUnitsSold;
+      acc.revenue += s.totalRevenue;
       return acc;
     },
-    { buyers: 0, units: 0 },
+    { buyers: 0, units: 0, revenue: 0 },
   );
+
+  // Orders can't outlive their product (the relation is Restrict, and retiring
+  // one archives it), so every sold product is in `rows`.
+  const soldProducts: SoldProduct[] = rows
+    .map((row) => {
+      const s = stats.get(row.id) ?? EMPTY_PURCHASE_STATS;
+      const split = payments.unitsByProduct.get(row.id) ?? { online: 0, cod: 0 };
+      return {
+        id: row.id,
+        name: row.name,
+        image: row.images[0],
+        units: s.totalUnitsSold,
+        online: split.online,
+        cod: split.cod,
+        revenue: s.totalRevenue,
+        lines: salesLines.get(row.id) ?? [],
+      };
+    })
+    .filter((product) => product.units > 0)
+    .sort((a, b) => b.revenue - a.revenue);
 
   return (
     <div>
@@ -53,9 +86,10 @@ export default async function AdminProductsPage() {
         </Link>
       </div>
 
-      {/* Three across even on a phone — stacked, these were three full-height
-          rows of mostly empty space before any product was visible. */}
-      <div className="mt-8 grid grid-cols-3 gap-px overflow-hidden border border-line bg-line">
+      {/* Two-by-two on a phone, four across from `sm` up — stacked single file,
+          these were full-height rows of mostly empty space before any product
+          was visible. */}
+      <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden border border-line bg-line sm:grid-cols-4">
         <div className="bg-paper px-3 py-4 sm:px-6 sm:py-5">
           <p className="text-xl font-black sm:text-2xl">{rows.length}</p>
           <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-ink-soft sm:text-xs">
@@ -73,29 +107,47 @@ export default async function AdminProductsPage() {
           <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-ink-soft sm:text-xs">
             Units Sold
           </p>
+          <p className="mt-1 text-[10px] leading-snug text-ink-soft sm:text-xs">
+            {payments.online.units} online &middot; {payments.cod.units} COD
+          </p>
+        </div>
+        <div className="bg-paper px-3 py-4 sm:px-6 sm:py-5">
+          <p className="text-xl font-black sm:text-2xl">{formatPrice(totals.revenue)}</p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-ink-soft sm:text-xs">
+            Revenue
+          </p>
+          <p className="mt-1 text-[10px] leading-snug text-ink-soft sm:text-xs">
+            {formatPrice(payments.online.products)} online &middot; {formatPrice(payments.cod.products)} COD
+          </p>
         </div>
       </div>
 
+      <SalesBreakdown products={soldProducts} payments={payments} notCounted={notCounted} />
+
+      <h2 className="mt-10 text-xl font-black tracking-tight">All products</h2>
+
       {/* Phones get stacked cards below; this table would otherwise be an
-          820px-wide sideways scroll, which is reading a spreadsheet through a
+          920px-wide sideways scroll, which is reading a spreadsheet through a
           letterbox. */}
-      <div className="mt-8 hidden overflow-x-auto border border-line md:block">
-        <table className="w-full min-w-[820px] border-collapse text-sm">
+      <div className="mt-4 hidden overflow-x-auto border border-line md:block">
+        <table className="w-full min-w-[920px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-line bg-paper-2 text-left text-xs uppercase tracking-[0.1em] text-ink-soft">
               <th className="py-3 pl-4 pr-4 font-medium">Product</th>
               <th className="py-3 pr-4 font-medium">Category</th>
               <th className="py-3 pr-4 font-medium">Price</th>
               <th className="py-3 pr-4 font-medium">Status</th>
+              <th className="py-3 pr-4 font-medium">For sale</th>
               <th className="py-3 pr-4 font-medium">Buyers</th>
               <th className="py-3 pr-4 font-medium">Units Sold</th>
+              <th className="py-3 pr-4 font-medium">Revenue</th>
               <th className="py-3 pr-4 font-medium"></th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-ink-soft">
+                <td colSpan={9} className="py-12 text-center text-ink-soft">
                   No products yet —{" "}
                   <Link href="/admin/products/new" className="text-gold-ink hover:underline">
                     add your first one
@@ -106,7 +158,7 @@ export default async function AdminProductsPage() {
             ) : (
               rows.map((row) => {
                 const { min, max } = priceRange(row.sizes);
-                const s = stats.get(row.id) ?? { uniqueBuyerCount: 0, totalUnitsSold: 0 };
+                const s = stats.get(row.id) ?? EMPTY_PURCHASE_STATS;
                 return (
                   <tr key={row.id} className="border-b border-line last:border-b-0 hover:bg-paper-2/60">
                     <td className="py-3 pl-4 pr-4">
@@ -122,7 +174,7 @@ export default async function AdminProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 pr-4 text-ink-soft">{row.category}</td>
+                    <td className="py-3 pr-4 text-ink-soft">{row.isSet ? "Gift Set" : categoryLabel(row.category)}</td>
                     <td className="py-3 pr-4">
                       {min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`}
                     </td>
@@ -140,8 +192,16 @@ export default async function AdminProductsPage() {
                         {row.isArchived ? "Archived" : row.bestseller ? "Bestseller" : row.isNew ? "New" : "Active"}
                       </span>
                     </td>
+                    <td className="py-3 pr-4">
+                      {row.isArchived ? (
+                        <span className="text-xs text-ink-soft">—</span>
+                      ) : (
+                        <ProductActiveToggle productId={row.id} productName={row.name} active={row.isActive} />
+                      )}
+                    </td>
                     <td className="py-3 pr-4">{s.uniqueBuyerCount}</td>
                     <td className="py-3 pr-4">{s.totalUnitsSold}</td>
+                    <td className="py-3 pr-4 font-semibold">{formatPrice(s.totalRevenue)}</td>
                     <td className="py-3 pr-4">
                       <div className="flex justify-end gap-2 text-xs font-semibold uppercase tracking-[0.06em]">
                         <Link
@@ -170,7 +230,7 @@ export default async function AdminProductsPage() {
       {/* Same data, re-laid-out for a phone: the row becomes a card, the
           columns become a labelled pair grid, and the actions become
           full-width 44px targets instead of 24px chips. */}
-      <div className="mt-8 md:hidden">
+      <div className="mt-4 md:hidden">
         {rows.length === 0 ? (
           <p className="border border-line px-4 py-10 text-center text-sm text-ink-soft">
             No products yet —{" "}
@@ -183,7 +243,7 @@ export default async function AdminProductsPage() {
           <ul className="space-y-4">
             {rows.map((row) => {
               const { min, max } = priceRange(row.sizes);
-              const s = stats.get(row.id) ?? { uniqueBuyerCount: 0, totalUnitsSold: 0 };
+              const s = stats.get(row.id) ?? EMPTY_PURCHASE_STATS;
               return (
                 <li key={row.id} className="border border-line bg-paper">
                   <div className="flex items-start gap-3 p-4">
@@ -213,10 +273,20 @@ export default async function AdminProductsPage() {
                               ? "New"
                               : "Active"}
                       </span>
+                      {row.isSet && (
+                        <span className="ml-1.5 mt-2 inline-block bg-paper-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-ink-soft">
+                          Gift Set
+                        </span>
+                      )}
+                      {!row.isArchived && (
+                        <div className="mt-1">
+                          <ProductActiveToggle productId={row.id} productName={row.name} active={row.isActive} />
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <dl className="grid grid-cols-3 gap-px border-y border-line bg-line text-center">
+                  <dl className="grid grid-cols-2 gap-px border-y border-line bg-line text-center">
                     <div className="bg-paper px-2 py-2.5">
                       <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-soft">Price</dt>
                       <dd className="mt-0.5 text-sm font-semibold">
@@ -230,6 +300,10 @@ export default async function AdminProductsPage() {
                     <div className="bg-paper px-2 py-2.5">
                       <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-soft">Units</dt>
                       <dd className="mt-0.5 text-sm font-semibold">{s.totalUnitsSold}</dd>
+                    </div>
+                    <div className="bg-paper px-2 py-2.5">
+                      <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-soft">Revenue</dt>
+                      <dd className="mt-0.5 text-sm font-semibold">{formatPrice(s.totalRevenue)}</dd>
                     </div>
                   </dl>
 

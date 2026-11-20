@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getPurchaseStatsForProduct } from "@/lib/purchase-stats";
+import { getPurchaseStatsForProduct, SOLD_ORDER_FILTER } from "@/lib/purchase-stats";
 
 const PAGE_SIZE = 20;
 
@@ -19,9 +19,9 @@ export async function GET(
 
   const [stats, total, orderItems] = await Promise.all([
     getPurchaseStatsForProduct(id),
-    prisma.orderItem.count({ where: { productId: id } }),
+    prisma.orderItem.count({ where: { productId: id, order: SOLD_ORDER_FILTER } }),
     prisma.orderItem.findMany({
-      where: { productId: id },
+      where: { productId: id, order: SOLD_ORDER_FILTER },
       include: { order: true },
       orderBy: { order: { createdAt: "desc" } },
       skip: (page - 1) * PAGE_SIZE,
@@ -43,6 +43,9 @@ export async function GET(
       sizeLabel: item.sizeLabel,
       quantity: item.quantity,
       price: item.price,
+      amount: item.price * item.quantity,
+      paymentMethod: item.order.paymentMethod,
+      paymentStatus: item.order.paymentStatus,
       purchasedAt: item.order.createdAt,
     })),
   });

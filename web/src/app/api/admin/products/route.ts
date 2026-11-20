@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { productInputSchema } from "@/lib/admin-schema";
-import { getPurchaseStatsByProduct } from "@/lib/purchase-stats";
+import { productCreateSchema } from "@/lib/admin-schema";
+import { EMPTY_PURCHASE_STATS, getPurchaseStatsByProduct } from "@/lib/purchase-stats";
 import { revalidateStorefront } from "@/lib/revalidate";
 
 export async function GET() {
@@ -16,14 +16,14 @@ export async function GET() {
   return NextResponse.json(
     products.map((product) => ({
       ...product,
-      ...(stats.get(product.id) ?? { uniqueBuyerCount: 0, totalUnitsSold: 0 }),
+      ...(stats.get(product.id) ?? EMPTY_PURCHASE_STATS),
     })),
   );
 }
 
 export async function POST(request: Request) {
   const json = await request.json();
-  const parsed = productInputSchema.safeParse(json);
+  const parsed = productCreateSchema.safeParse(json);
 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

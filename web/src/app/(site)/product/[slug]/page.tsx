@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/products";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { AddToCartPanel } from "@/components/product/AddToCartPanel";
+import { TrustBadges } from "@/components/product/TrustBadges";
 import { ProductSelectionProvider } from "@/lib/product-selection-context";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
 import { AccordionItem } from "@/components/ui/Accordion";
@@ -10,7 +11,8 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ViewContent } from "@/components/analytics/ViewContent";
 import { Reveal } from "@/components/motion/Reveal";
-import { categoryLabel } from "@/lib/shop-filters";
+import { productTypeLabel } from "@/lib/shop-filters";
+import { SetContents } from "@/components/product/SetContents";
 import { formatPrice } from "@/lib/format";
 import { getStoreSettings } from "@/lib/store-settings";
 
@@ -51,7 +53,7 @@ export default async function ProductPage({
 
   return (
     <div className="pt-16 md:pt-20">
-      {openingSize && (
+      {openingSize && product.available !== false && (
         <ViewContent
           sku={openingSize.sku}
           name={product.name}
@@ -82,7 +84,7 @@ export default async function ProductPage({
 
           <div className="md:col-span-4 md:col-start-9 md:row-span-2 md:row-start-1">
             <span className="inline-block rounded-full bg-paper-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">
-              {categoryLabel(product.category)}
+              {productTypeLabel(product)}
             </span>
             <h1 className="mt-3 text-4xl font-black tracking-tight">
               {product.name}
@@ -91,6 +93,7 @@ export default async function ProductPage({
 
             <div className="mt-8">
               <AddToCartPanel product={product} />
+              <TrustBadges showCod={settings.codEnabled} />
             </div>
 
             <p className="mt-8 leading-relaxed text-ink-soft">
@@ -98,7 +101,11 @@ export default async function ProductPage({
             </p>
 
             <div className="mt-8">
-              <NotesPyramid notes={product.notes} accent={product.accent} />
+              {product.isSet ? (
+                <SetContents items={product.setItems ?? []} accent={product.accent} />
+              ) : (
+                <NotesPyramid notes={product.notes} accent={product.accent} />
+              )}
             </div>
 
             <div className="mt-6 flex flex-col gap-3">
