@@ -38,9 +38,13 @@ export async function SignatureCollections() {
             const onSale = isOnSale(cheapest.price, cheapest.compareAtPrice);
 
             return (
-              <Reveal key={product.id} delay={(i % 3) * 0.06} className="w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
-                <div className="flex h-full flex-col">
-                  <Link href={`/product/${product.slug}`} className="group block">
+              <Reveal key={product.id} delay={(i % 3) * 0.06} className="flex w-[42vw] max-w-[180px] shrink-0 sm:w-64 sm:max-w-none">
+                {/* The cards in a row stretch to the tallest one, and the button
+                    below is pushed to the bottom (mt-auto) rather than sitting
+                    right after the price. Otherwise a name that wraps to two
+                    lines drops its button below its neighbours'. */}
+                <div className="flex h-full w-full flex-col">
+                  <Link href={`/product/${product.slug}`} className="group mb-4 block">
                     <div
                       className="relative aspect-square overflow-hidden rounded-[28px] border-2 bg-well"
                       style={{ borderColor: `${product.accent}66` }}
@@ -56,8 +60,11 @@ export async function SignatureCollections() {
                         style={{ background: wellSurface(product.accent) }}
                       />
                       <div className="absolute inset-[13%]">
+                        {/* The size's own photo (the one "From ₹" refers to), not
+                            the gallery's first photo: that can be a lifestyle shot
+                            that suits the product page but not a small square card. */}
                         <Image
-                          src={cutoutSrc(product.images[0])}
+                          src={cutoutSrc(cheapest.image || product.images[0])}
                           alt={product.fullName}
                           fill
                           draggable={false}
@@ -80,7 +87,7 @@ export async function SignatureCollections() {
                   <ButtonLink
                     href={`/product/${product.slug}`}
                     variant="secondary"
-                    className="mt-4 w-full"
+                    className="mt-auto w-full"
                   >
                     Choose options
                   </ButtonLink>
