@@ -15,6 +15,38 @@
 //
 // `accent` is the product's own colour, and arrives as a 6-digit hex, so the
 // two-digit suffixes below are alpha (`00` fully transparent).
+// The glow behind the bottle in the dark homepage spotlight: the product's own
+// colour as a soft halo, like a coloured light placed behind it.
+//
+// A glow in the accent colour only shows if the accent is brighter than the
+// section it sits on, and plenty of accents are not (Privé Black, Orchid, deep
+// blue, oud brown are all close to the near-black section). So a dark accent is
+// mixed toward white until it is bright enough to read as light, which keeps
+// its hue — blue stays bluish, brown stays warm — instead of switching every
+// dark product to the same grey. Bright accents are used as they are.
+//
+// Gradients only, no blurred element, so it costs nothing to repaint while the
+// spotlight rotates.
+export function spotlightGlow(accent: string): string {
+  const hex = /^#[0-9a-f]{6}$/i.test(accent) ? accent : "#ffffff";
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+
+  // perceived brightness, 0–255
+  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const TARGET = 120;
+  const t = luma >= TARGET ? 0 : (TARGET - luma) / (255 - luma);
+  const lift = (channel: number) => Math.round(channel + (255 - channel) * t);
+  const c = `#${[lift(r), lift(g), lift(b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+
+  return [
+    // the halo, close behind the bottle
+    `radial-gradient(54% 44% at 50% 52%, ${c}5c 0%, ${c}29 46%, ${c}00 78%)`,
+    // a wider, fainter wash so the light falls off gradually
+    `radial-gradient(88% 72% at 50% 55%, ${c}1f 0%, ${c}00 72%)`,
+  ].join(",");
+}
+
 export function wellSurface(accent: string): string {
   return [
     // contact shadow, pooled under the bottle rather than a hard ellipse —
