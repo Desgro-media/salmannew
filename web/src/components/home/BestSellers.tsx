@@ -48,8 +48,10 @@ export async function BestSellers() {
                       style={{ background: wellSurface(product.accent) }}
                     />
                     <div className="absolute inset-[13%]">
+                      {/* The size's own photo, as on New Arrivals and the shop grid —
+                          the gallery's first photo can be a lifestyle shot. */}
                       <Image
-                        src={cutoutSrc(product.images[0])}
+                        src={cutoutSrc(cheapest.image || product.images[0])}
                         alt={product.fullName}
                         fill
                         draggable={false}
