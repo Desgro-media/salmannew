@@ -20,16 +20,26 @@ function slugify(input: string): string {
     .replace(/(^-+|-+$)/g, "");
 }
 
-// Liquids are sold by volume (ml), solid perfumes by weight (mg).
-const SIZE_UNITS = ["ml", "mg"] as const;
+// Liquids are sold by volume (ml, L), solids and attars by weight (gm, kg) or
+// the traditional tola; oz covers imported bottles. The number is always a
+// whole number, so a smaller unit is the way to express a fraction (500 gm, not 0.5 kg).
+const SIZE_UNITS = ["ml", "gm", "tola", "oz", "L", "kg"] as const;
 type SizeUnit = (typeof SIZE_UNITS)[number];
+
+/** Reads the unit back out of a saved label like "50 gm". Labels from before
+ *  gm existed said "mg"; they map to gm so re-saving corrects them. */
+function unitFromLabel(label: string): SizeUnit {
+  const word = label.match(/([a-z]+)\s*$/i)?.[1].toLowerCase();
+  if (word === "mg" || word === "g" || word === "gms" || word === "gram" || word === "grams") return "gm";
+  return SIZE_UNITS.find((u) => u.toLowerCase() === word) ?? "ml";
+}
 
 function suggestSku(slug: string, volumeMl: string, unit: SizeUnit = "ml"): string {
   const prefix = (slugify(slug).replace(/-/g, "").slice(0, 3) || "prd").toUpperCase();
   const vol = volumeMl ? volumeMl.padStart(3, "0") : "000";
-  // ml keeps the original SP-IMP-030 shape so existing codes don't change; a
-  // solid gets an MG suffix so it can't collide with a same-numbered ml size.
-  return `SP-${prefix}-${vol}${unit === "mg" ? "MG" : ""}`;
+  // ml keeps the original SP-IMP-030 shape so existing codes don't change; any
+  // other unit gets its own suffix so it can't collide with a same-numbered ml size.
+  return `SP-${prefix}-${vol}${unit === "ml" ? "" : unit.toUpperCase()}`;
 }
 
 function discountSummary(price: string, compareAtPrice: string): string | null {
@@ -105,7 +115,7 @@ interface SizeForm {
   id?: string;
   /** a set's option name ("Gift Box"); single perfumes derive it from volumeMl */
   label: string;
-  /** the number typed in the Size box; its unit is `unit` (ml or mg) */
+  /** the number typed in the Size box; its unit is `unit` (ml, gm, tola, ...) */
   volumeMl: string;
   unit: SizeUnit;
   sku: string;
@@ -249,8 +259,8 @@ function fromInitial(initial: ProductFormInitial): ProductFormValues {
       label: s.label,
       volumeMl: String(s.volumeMl),
       // Only the label records the unit (volumeMl is just the number), so read
-      // it back from there: "10 mg" reopens as mg, everything else as ml.
-      unit: /\bmg\b/i.test(s.label) ? "mg" : "ml",
+      // it back from there: "10 gm" reopens as gm, "1 tola" as tola, and so on.
+      unit: unitFromLabel(s.label),
       sku: s.sku,
       price: String(s.price),
       onSale: s.compareAtPrice != null,
@@ -880,7 +890,7 @@ export function ProductForm({
             description={
               values.isSet
                 ? "Usually one option. Add more only if you sell the set in more than one version."
-                : "At least one size is required. Pick ml for liquids, mg for solids."
+                : "At least one size is required. Pick ml or L for liquids, gm, kg or tola for solids and attars."
             }
             issues={sectionIssues("size")}
           >
@@ -932,7 +942,7 @@ export function ProductForm({
                                 aria-label="Unit"
                                 value={size.unit}
                                 onChange={(e) => handleUnitChange(i, e.target.value as SizeUnit)}
-                                className="mt-1.5 min-h-11 w-[4.5rem] shrink-0 border border-line bg-transparent px-2.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
+                                className="mt-1.5 min-h-11 w-[5.5rem] shrink-0 border border-line bg-transparent px-2.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
                               >
                                 {SIZE_UNITS.map((u) => (
                                   <option key={u} value={u}>
