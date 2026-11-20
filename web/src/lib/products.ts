@@ -113,7 +113,7 @@ export async function getProductBySlug(slug: string): Promise<Product | undefine
 // neighbours instead of one shared list.
 export async function getRelatedProducts(
   current: Pick<Product, "slug" | "category" | "isSet">,
-  count = 3,
+  count = 4,
 ): Promise<Product[]> {
   const all = await getProductsNewestFirst();
   const start = Math.max(
