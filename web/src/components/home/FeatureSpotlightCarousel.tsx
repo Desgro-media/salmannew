@@ -46,8 +46,12 @@ export function FeatureSpotlightCarousel({ products }: { products: Product[] }) 
                 transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute inset-0"
               >
+                {/* The size's own photo (the one "Shop from ₹…" refers to), as on
+                    the card rows. The gallery's first photo can be a lifestyle
+                    shot on a white backdrop, which looks like a pale block on
+                    this dark section. */}
                 <Image
-                  src={cutoutSrc(product.images[0])}
+                  src={cutoutSrc(cheapest?.image || product.images[0])}
                   alt={product.fullName}
                   fill
                   sizes="(min-width: 768px) 45vw, 90vw"
