@@ -5,9 +5,9 @@ import { Marquee } from "@/components/layout/Marquee";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import {
   PRICE_BANDS,
-  SHOP_FILTERS,
   SHOP_SORTS,
   SHOP_TYPES,
+  parseShopFilter,
 } from "@/lib/shop-filters";
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default async function ShopPage({
   // Matched against the allowed values rather than cast: these arrive from a
   // URL anyone can edit, and an unknown one should open the shop on its
   // defaults instead of a state the grid has no case for.
-  const initialFilter = SHOP_FILTERS.find((f) => f === params.filter);
+  const initialFilter = parseShopFilter(params.filter);
   const initialType = SHOP_TYPES.find((t) => t === params.type);
   const initialBand = PRICE_BANDS.find((b) => b === params.price);
   const initialSort = SHOP_SORTS.find((s) => s === params.sort);

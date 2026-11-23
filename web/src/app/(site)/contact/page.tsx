@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
+import { BreakableEmail } from "@/components/ui/BreakableEmail";
 import {
+  CONTACT_EMAIL,
   LOCATION_NAME,
   LOCATION_ADDRESS,
   LOCATION_MAPS_DIRECTIONS_URL,
@@ -16,8 +18,8 @@ export const metadata: Metadata = {
 const CHANNELS = [
   {
     label: "Email",
-    value: "hello@salmanperfumes.com",
-    href: "mailto:hello@salmanperfumes.com",
+    value: CONTACT_EMAIL,
+    href: `mailto:${CONTACT_EMAIL}`,
   },
   {
     label: "Phone",
@@ -48,7 +50,10 @@ export default function ContactPage() {
       </section>
 
       <section className="container-grid py-20 md:py-28">
-        <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-3">
+        {/* One column until lg, three after. Three columns on a tablet left each
+            only about 200px wide, which an email address cannot fit in, so it ran
+            into the phone number beside it. */}
+        <div className="grid grid-cols-1 gap-x-8 gap-y-12 lg:grid-cols-3">
           {CHANNELS.map((channel, i) => (
             <Reveal key={channel.label} delay={i * 0.08}>
               <p className="eyebrow text-ink-soft">{channel.label}</p>
@@ -56,9 +61,9 @@ export default function ContactPage() {
                 href={channel.href}
                 target={channel.href.startsWith("http") ? "_blank" : undefined}
                 rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                className="mt-3 inline-block text-2xl font-semibold tracking-tight hover:text-gold-ink md:text-3xl"
+                className="mt-3 inline-block text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] hover:text-gold-ink md:text-3xl"
               >
-                {channel.value}
+                {channel.href.startsWith("mailto:") ? <BreakableEmail value={channel.value} /> : channel.value}
               </a>
             </Reveal>
           ))}

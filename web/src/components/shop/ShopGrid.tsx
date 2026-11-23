@@ -17,6 +17,7 @@ import {
   priceBandLabel,
   productFromPrice,
   shopFilterLabel,
+  shopGroupRank,
   shopSortLabel,
   shopTypeLabel,
   type PriceBand,
@@ -73,9 +74,12 @@ export function ShopGrid({
         matchesPriceBand(p, band),
     );
 
-    // Featured is whatever order the catalogue came in — newest first — so it
-    // is the one sort that must not copy; the array is handed straight back.
-    if (sort === "Featured") return kept;
+    // Featured is the catalogue's own order — newest first — but grouped: gift
+    // sets, then perfumes, then bakhoor. The sort is stable, so inside each group
+    // that newest-first order is untouched. Only Featured is grouped: asking for
+    // price order is an explicit request, and honouring it means a gift set does
+    // not jump the queue just for being a gift set.
+    if (sort === "Featured") return [...kept].sort((a, b) => shopGroupRank(a) - shopGroupRank(b));
 
     const direction = sort === "PriceAsc" ? 1 : -1;
     return [...kept].sort(
@@ -84,6 +88,11 @@ export function ShopGrid({
   }, [products, active, type, band, sort, newArrivalIds]);
 
   const narrowed = type !== "All" || band !== "Any" || active !== "All";
+
+  // A tab nothing has been added to yet (Bakhoor, before its first product) is not
+  // the same as filters that happen to rule everything out: telling the visitor to
+  // "try a wider price band" there would be nonsense.
+  const tabIsEmpty = active !== "All" && !products.some((p) => matchesShopFilter(p, active));
 
   function clearAll() {
     setActive("All");
@@ -139,10 +148,23 @@ export function ShopGrid({
       </div>
 
       <motion.p layout className="mt-6 text-xs text-ink-soft">
-        {filtered.length} scent{filtered.length !== 1 && "s"}
+        {filtered.length} product{filtered.length !== 1 && "s"}
       </motion.p>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && tabIsEmpty ? (
+        <div className="mt-16 text-center">
+          <p className="text-lg font-bold">Nothing in {shopFilterLabel(active)} just yet.</p>
+          <p className="mt-2 text-sm text-ink-soft">
+            New products are added here as they arrive. Have a look at everything we have in the meantime.
+          </p>
+          <button
+            onClick={clearAll}
+            className="mt-6 bg-ink px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-gold hover:text-ink"
+          >
+            Show Everything
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="mt-16 text-center">
           <p className="text-lg font-bold">Nothing matches that combination.</p>
           <p className="mt-2 text-sm text-ink-soft">

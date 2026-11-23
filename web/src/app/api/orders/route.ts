@@ -7,6 +7,7 @@ import { getStoreSettings } from "@/lib/store-settings";
 import { codAvailability } from "@/lib/cod";
 import { formatDeliveryDate, formatPrice } from "@/lib/format";
 import { notifyOwnerAfterResponse } from "@/lib/payments";
+import { sendToPostbridgeAfterResponse } from "@/lib/postbridge-orders";
 import { orderPayloadSchema } from "@/lib/order-schema";
 import { createRazorpayOrder, razorpayKeyId, toPaise } from "@/lib/razorpay";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
@@ -211,6 +212,9 @@ export async function POST(request: Request) {
         price: line.price,
       })),
     });
+
+    // A COD order is real from this moment, so it goes to PostBridge now.
+    sendToPostbridgeAfterResponse(order.id);
 
     return NextResponse.json({
       orderId: order.orderNumber,

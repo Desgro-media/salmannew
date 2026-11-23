@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { safeHref } from "@/lib/shipment";
 import { PLACED_ORDER_FILTER } from "@/lib/payments";
 import { verifyCustomerSessionToken, CUSTOMER_SESSION_COOKIE_NAME } from "@/lib/customer-auth";
 import { formatPrice } from "@/lib/format";
@@ -74,6 +76,36 @@ export default async function AccountPage() {
                     ))}
                   </ul>
                   <p className="mt-2 text-sm font-semibold">{formatPrice(order.total)}</p>
+
+                  {/* The number and link are stored on the order, so this costs no
+                      call to PostBridge; the scan history is one click away on the
+                      tracking page. */}
+                  {order.trackingNumber && (
+                    <p className="mt-2 text-sm">
+                      <span className="text-ink-soft">India Post tracking</span>{" "}
+                      <span className="font-mono font-semibold">{order.trackingNumber}</span>
+                      {safeHref(order.trackingUrl) && (
+                        <>
+                          {" · "}
+                          <a
+                            href={safeHref(order.trackingUrl) ?? undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 hover:text-gold-ink"
+                          >
+                            Track on India Post ↗
+                          </a>
+                        </>
+                      )}
+                      {" · "}
+                      <Link
+                        href={`/track?order=${order.orderNumber}`}
+                        className="underline underline-offset-2 hover:text-gold-ink"
+                      >
+                        See scans
+                      </Link>
+                    </p>
+                  )}
 
                   <OrderTimeline
                     status={order.status}

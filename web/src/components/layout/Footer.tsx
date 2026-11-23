@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/products";
-import { LOCATION_MAPS_DIRECTIONS_URL } from "@/lib/contact-info";
+import { BreakableEmail } from "@/components/ui/BreakableEmail";
+import { CONTACT_EMAIL, LOCATION_MAPS_DIRECTIONS_URL } from "@/lib/contact-info";
 
 export async function Footer() {
   const products = await getAllProducts();
@@ -77,7 +78,9 @@ export async function Footer() {
         <div className="col-span-2 md:col-span-3">
           <p className="eyebrow text-paper/65">Get in touch</p>
           <ul className="mt-5 space-y-3 text-sm text-paper/80">
-            <li>hello@salmanperfumes.com</li>
+            <li className="[overflow-wrap:anywhere]">
+              <BreakableEmail value={CONTACT_EMAIL} />
+            </li>
             <li>+91 94473 67777</li>
             <li>
               <a

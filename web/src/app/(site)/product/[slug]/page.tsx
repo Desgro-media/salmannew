@@ -11,7 +11,7 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ViewContent } from "@/components/analytics/ViewContent";
 import { Reveal } from "@/components/motion/Reveal";
-import { productTypeLabel } from "@/lib/shop-filters";
+import { productKind, productTypeLabel } from "@/lib/shop-filters";
 import { SetContents } from "@/components/product/SetContents";
 import { formatPrice } from "@/lib/format";
 import { getStoreSettings } from "@/lib/store-settings";
@@ -50,6 +50,11 @@ export default async function ProductPage({
 
   // The size the page opens on, and so the price a visitor sees first.
   const openingSize = product.sizes[0];
+
+  // A bakhoor listing has no spray to describe, and may have no fragrance notes
+  // either; an empty Top / Heart / Base pyramid would just be three blank rows.
+  const isBakhoor = productKind(product) === "bakhoor";
+  const hasNotes = product.notes.top.length + product.notes.heart.length + product.notes.base.length > 0;
 
   return (
     <div className="pt-16 md:pt-20">
@@ -100,13 +105,15 @@ export default async function ProductPage({
               {product.description}
             </p>
 
-            <div className="mt-8">
-              {product.isSet ? (
-                <SetContents items={product.setItems ?? []} accent={product.accent} />
-              ) : (
-                <NotesPyramid notes={product.notes} accent={product.accent} />
-              )}
-            </div>
+            {(product.isSet || hasNotes) && (
+              <div className="mt-8">
+                {product.isSet ? (
+                  <SetContents items={product.setItems ?? []} accent={product.accent} />
+                ) : (
+                  <NotesPyramid notes={product.notes} accent={product.accent} />
+                )}
+              </div>
+            )}
 
             <div className="mt-6 flex flex-col gap-3">
               <AccordionItem title="The Story" defaultOpen>
@@ -118,11 +125,13 @@ export default async function ProductPage({
                   : `Free shipping on orders over ${formatPrice(settings.freeShippingThreshold)}; ${formatPrice(settings.shippingFee)} below that.`}{" "}
                 Unopened bottles can be returned within 14 days of delivery.
               </AccordionItem>
-              <AccordionItem title="How to Apply">
-                Spray on pulse points — wrists, neck, behind the ears. Eau de
-                Parfum concentration lasts 6–8 hours; avoid rubbing the skin
-                after application.
-              </AccordionItem>
+              {!isBakhoor && (
+                <AccordionItem title="How to Apply">
+                  Spray on pulse points — wrists, neck, behind the ears. Eau de
+                  Parfum concentration lasts 6–8 hours; avoid rubbing the skin
+                  after application.
+                </AccordionItem>
+              )}
             </div>
           </div>
 

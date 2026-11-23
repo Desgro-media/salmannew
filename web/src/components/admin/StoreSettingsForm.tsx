@@ -7,8 +7,13 @@ import { Field, Input } from "@/components/ui/Input";
 import { formatPrice } from "@/lib/format";
 import { calculateShipping, type ShippingSettings } from "@/lib/shipping";
 import type { CodSettings } from "@/lib/cod";
+import type { ParcelSettings } from "@/lib/parcel-weight";
 
-export function StoreSettingsForm({ settings }: { settings: ShippingSettings & CodSettings }) {
+export function StoreSettingsForm({
+  settings,
+}: {
+  settings: ShippingSettings & CodSettings & ParcelSettings;
+}) {
   const router = useRouter();
   // Kept as strings so the fields can be cleared while typing. A number state
   // would coerce an empty box to 0 and silently offer free delivery.
@@ -17,6 +22,7 @@ export function StoreSettingsForm({ settings }: { settings: ShippingSettings & C
   const [codEnabled, setCodEnabled] = useState(settings.codEnabled);
   const [codFee, setCodFee] = useState(String(settings.codFee));
   const [codMax, setCodMax] = useState(String(settings.codMaxOrderValue));
+  const [packing, setPacking] = useState(String(settings.packingGrams));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -25,13 +31,16 @@ export function StoreSettingsForm({ settings }: { settings: ShippingSettings & C
   const thresholdValue = Number(threshold);
   const codFeeValue = Number(codFee);
   const codMaxValue = Number(codMax);
+  const packingValue = Number(packing);
   const isWholeRupees = (raw: string, value: number) =>
     raw !== "" && Number.isInteger(value) && value >= 0;
+  const validPacking = isWholeRupees(packing, packingValue) && packingValue <= 5000;
   const valid =
     isWholeRupees(shippingFee, feeValue) &&
     isWholeRupees(threshold, thresholdValue) &&
     isWholeRupees(codFee, codFeeValue) &&
-    isWholeRupees(codMax, codMaxValue);
+    isWholeRupees(codMax, codMaxValue) &&
+    validPacking;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,6 +57,7 @@ export function StoreSettingsForm({ settings }: { settings: ShippingSettings & C
           codEnabled,
           codFee: codFeeValue,
           codMaxOrderValue: codMaxValue,
+          packingGrams: packingValue,
         }),
       });
       if (!res.ok) {
@@ -169,6 +179,30 @@ export function StoreSettingsForm({ settings }: { settings: ShippingSettings & C
             )}
           </p>
         )}
+      </div>
+
+      <div className="mt-10 border-t border-line pt-8">
+        <p className="eyebrow text-ink-soft">Shipping Packaging</p>
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Packing weight per parcel (grams)">
+            <Input
+              required
+              type="number"
+              min={0}
+              max={5000}
+              step={1}
+              value={packing}
+              onChange={(e) => setPacking(e.target.value)}
+            />
+          </Field>
+        </div>
+        <p className="mt-4 max-w-md text-sm text-ink-soft">
+          What the shipping box, wrapping and tape weigh. It is added once to the weights of the perfumes
+          in an order, and the total is what India Post is told the parcel weighs.{" "}
+          <strong className="text-ink">Weigh one fully packed parcel</strong>, subtract the perfume
+          boxes, and enter the difference. A weight that is too low or too high can land the parcel in
+          the wrong price band.
+        </p>
       </div>
 
       <div className="mt-6">

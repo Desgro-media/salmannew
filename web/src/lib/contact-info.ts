@@ -1,3 +1,8 @@
+// The address customers see (contact page, footer). It is not the address the shop sends
+// its own emails from or receives order alerts on — those are the BREVO_SENDER_EMAIL and
+// ORDER_NOTIFY_EMAIL settings.
+export const CONTACT_EMAIL = "salmanperfume.com@gmail.com";
+
 export const LOCATION_NAME = "MARKAZ COMPLEX";
 export const LOCATION_ADDRESS =
   "Markaz Complex, Mavoor Rd, Opposite New Bus Stand, Arayidathupalam, Kozhikode, Kerala 673004";

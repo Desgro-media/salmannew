@@ -5,7 +5,10 @@ import { formatPrice } from "@/lib/format";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/payment-status";
 import { OrderStatusControl } from "@/components/admin/OrderStatusControl";
+import { ShippingPanel } from "@/components/admin/ShippingPanel";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { isPostbridgeEnabled } from "@/lib/postbridge";
+import { isShippable, loadShipment } from "@/lib/postbridge-orders";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,9 @@ export default async function AdminOrderDetailPage({
 
   if (!order) notFound();
 
+  // Only reaches PostBridge when the order has a tracking number to look up.
+  const shipment = await loadShipment(order);
+
   return (
     <div>
       <Link
@@ -63,6 +69,21 @@ export default async function AdminOrderDetailPage({
           orderId={order.id}
           currentStatus={order.status}
           orderNumber={order.orderNumber}
+        />
+      </div>
+
+      <div className="mt-6 border border-line bg-paper-2 px-6 py-6">
+        <ShippingPanel
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          enabled={isPostbridgeEnabled()}
+          shippable={isShippable(order)}
+          sync={order.postbridgeSync}
+          pbStatus={order.postbridgeStatus}
+          error={order.postbridgeError}
+          syncedLabel={order.postbridgeSyncedAt ? stampFormatter.format(order.postbridgeSyncedAt) : null}
+          weightGrams={order.postbridgeWeightGrams}
+          shipment={shipment}
         />
       </div>
 

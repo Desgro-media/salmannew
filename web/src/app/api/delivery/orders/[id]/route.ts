@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { ALL_ORDER_STATUSES, isRedundantChange } from "@/lib/order-status";
 import { codPaymentChange } from "@/lib/cod";
+import { cancelAtPostbridgeAfterResponse } from "@/lib/postbridge-orders";
 
 // Access is enforced by proxy.ts, which guards /api/delivery/:path* to
 // DELIVERY-role sessions only. The session is re-read here only to attribute
@@ -68,6 +69,9 @@ export async function PATCH(
       },
     }),
   ]);
+
+  // Same as the admin route: a cancelled order must not be collected by India Post.
+  if (status === "CANCELLED") cancelAtPostbridgeAfterResponse(id);
 
   return NextResponse.json({ ok: true, status });
 }

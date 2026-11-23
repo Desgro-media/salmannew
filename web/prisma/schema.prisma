@@ -22,6 +22,11 @@ enum Category {
   Floral
   Woody
   Musk
+  // Not a scent family: bakhoor (incense) is a different kind of product, shown
+  // under its own tab in the shop. It lives in this column, as Prive does, so a
+  // product has exactly one "what is it" value. The admin form picks it through
+  // its "What are you adding?" control rather than the scent-family dropdown.
+  Bakhoor
 }
 
 // Storefront values the shop owner changes without a deploy. One row, always
@@ -44,6 +49,10 @@ model StoreSettings {
   codEnabled            Boolean  @default(true)
   codFee                Int      @default(0)
   codMaxOrderValue      Int      @default(5000)
+  // What the shipping carton, wrapping and tape add to a parcel, in grams. Added
+  // once per order to the items' own weights when the weight is sent to PostBridge.
+  // Not used at checkout; it lives here so the owner can change it without a deploy.
+  packingGrams          Int      @default(50)
   updatedAt             DateTime @updatedAt
 }
 
@@ -135,6 +144,12 @@ model ProductSize {
   compareAtPrice Int?
   image          String
   thumb          String
+  // The sealed box on a scale, in grams: bottle, box and shrink-wrap, but not the
+  // shipping packaging (StoreSettings.packingGrams adds that once per order). India
+  // Post bills by weight slab, so the parcel weight sent to PostBridge is the sum
+  // of these times the quantities. Null = not weighed yet; the admin form leaves it
+  // optional so a product can be added before anyone has put it on the scale.
+  weightGrams    Int?
   // Retiring a size cannot mean deleting the row: OrderItem points here with
   // onDelete: Restrict, so any size that has ever been bought refuses to go,
   // and past orders should keep their link regardless. Archiving takes it off
@@ -200,6 +215,20 @@ enum PaymentMethod {
   COD
 }
 
+// Where an order stands with PostBridge, the service that books India Post
+// shipments for us. Its own axis, apart from OrderStatus and PaymentStatus: an
+// order can be PAID and PACKED and still not sent anywhere, and a failed
+// hand-off must never be mistaken for a failed order.
+//
+// NOT_SENT is how every order starts and where it stays whenever the integration
+// is switched off, so orders from before it existed need no backfill. FAILED
+// keeps its reason in postbridgeError so the admin can retry from the order page.
+enum PostbridgeSync {
+  NOT_SENT
+  SENT
+  FAILED
+}
+
 model Order {
   id                String             @id @default(cuid())
   orderNumber       String             @unique
@@ -219,6 +248,23 @@ model Order {
   razorpayOrderId   String?            @unique
   razorpayPaymentId String?
   paidAt            DateTime?
+  // PostBridge hand-off. All optional or defaulted, so an order from before the
+  // integration is simply NOT_SENT and nothing else about it changes.
+  postbridgeSync     PostbridgeSync @default(NOT_SENT)
+  // PostBridge's own wording ("Order Placed", "Pending", "Manifested",
+  // "Cancelled"). Text, not an enum: it is theirs to extend, not ours.
+  postbridgeStatus   String?
+  postbridgeError    String?
+  postbridgeSyncedAt DateTime?
+  // The parcel weight declared to PostBridge, kept so an admin can see what was
+  // sent when a parcel is billed in an unexpected slab. Null when none was sent
+  // (PostBridge then falls back to its own catalogue weight).
+  postbridgeWeightGrams Int?
+  // The India Post article number and its tracking page, once a shipment is
+  // booked. The scan history is not stored: it keeps changing, so it is fetched
+  // when it is shown.
+  trackingNumber     String?
+  trackingUrl        String?
   customerId        String?
   customer          Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerFullName  String
@@ -237,6 +283,7 @@ model Order {
   @@index([customerId])
   @@index([status])
   @@index([paymentStatus])
+  @@index([postbridgeSync])
 }
 
 // One row per checkpoint the order has actually reached. Order.status is the

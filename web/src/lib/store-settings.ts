@@ -2,10 +2,11 @@ import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { DEFAULT_COD_SETTINGS, type CodSettings } from "@/lib/cod";
 import { DEFAULT_SHIPPING_SETTINGS, type ShippingSettings } from "@/lib/shipping";
+import { DEFAULT_PARCEL_SETTINGS, type ParcelSettings } from "@/lib/parcel-weight";
 
 export const STORE_SETTINGS_ID = 1;
 
-export type StoreSettings = ShippingSettings & CodSettings;
+export type StoreSettings = ShippingSettings & CodSettings & ParcelSettings;
 
 /**
  * The admin-configured storefront settings. Server-only — it touches Prisma.
@@ -28,8 +29,9 @@ export const getStoreSettings = cache(async (): Promise<StoreSettings> => {
       codEnabled: true,
       codFee: true,
       codMaxOrderValue: true,
+      packingGrams: true,
     },
   });
 
-  return row ?? { ...DEFAULT_SHIPPING_SETTINGS, ...DEFAULT_COD_SETTINGS };
+  return row ?? { ...DEFAULT_SHIPPING_SETTINGS, ...DEFAULT_COD_SETTINGS, ...DEFAULT_PARCEL_SETTINGS };
 });

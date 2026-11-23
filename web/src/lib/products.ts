@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import type { Product } from "./types";
 import { parseSetItems } from "./set-items";
+import { BAKHOOR_CATEGORY } from "./shop-filters";
 
 // Archived sizes are withheld from every storefront read: a retired size still
 // has to exist for the orders that reference it, but must not be offered for
@@ -104,8 +105,9 @@ export async function getProductBySlug(slug: string): Promise<Product | undefine
 // product:
 //   1. the same scent family (a Musk suggests other Musks);
 //   2. the same line (me. or Privé);
-//   3. everything else, with gift sets last.
+//   3. everything else, with gift sets — and, on a perfume's page, bakhoor — last.
 // A gift set page is the other way round: other sets first, then scents.
+// A bakhoor page suggests other bakhoor first (the same "family").
 //
 // Within a rank, candidates are taken in catalogue order starting just after the
 // product being viewed and wrapping round. That keeps the choice stable (the
@@ -121,11 +123,14 @@ export async function getRelatedProducts(
     all.findIndex((p) => p.slug === current.slug),
   );
   const isPrive = (p: Pick<Product, "category">) => p.category === "Prive";
+  const isBakhoor = (p: Pick<Product, "category">) => p.category === BAKHOOR_CATEGORY;
 
   const rank = (p: Product): number => {
     if (current.isSet) return p.isSet ? 0 : 1;
     if (p.isSet) return 3;
     if (p.category === current.category) return 0;
+    // A perfume's page should suggest perfumes before incense.
+    if (isBakhoor(p) && !isBakhoor(current)) return 3;
     return isPrive(p) === isPrive(current) ? 1 : 2;
   };
 
