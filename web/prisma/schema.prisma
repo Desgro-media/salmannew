@@ -200,6 +200,20 @@ enum PaymentMethod {
   COD
 }
 
+// Where an order stands with PostBridge, the service that books India Post
+// shipments for us. Its own axis, apart from OrderStatus and PaymentStatus: an
+// order can be PAID and PACKED and still not sent anywhere, and a failed
+// hand-off must never be mistaken for a failed order.
+//
+// NOT_SENT is how every order starts and where it stays whenever the integration
+// is switched off, so orders from before it existed need no backfill. FAILED
+// keeps its reason in postbridgeError so the admin can retry from the order page.
+enum PostbridgeSync {
+  NOT_SENT
+  SENT
+  FAILED
+}
+
 model Order {
   id                String             @id @default(cuid())
   orderNumber       String             @unique
@@ -219,6 +233,19 @@ model Order {
   razorpayOrderId   String?            @unique
   razorpayPaymentId String?
   paidAt            DateTime?
+  // PostBridge hand-off. All optional or defaulted, so an order from before the
+  // integration is simply NOT_SENT and nothing else about it changes.
+  postbridgeSync     PostbridgeSync @default(NOT_SENT)
+  // PostBridge's own wording ("Order Placed", "Pending", "Manifested",
+  // "Cancelled"). Text, not an enum: it is theirs to extend, not ours.
+  postbridgeStatus   String?
+  postbridgeError    String?
+  postbridgeSyncedAt DateTime?
+  // The India Post article number and its tracking page, once a shipment is
+  // booked. The scan history is not stored: it keeps changing, so it is fetched
+  // when it is shown.
+  trackingNumber     String?
+  trackingUrl        String?
   customerId        String?
   customer          Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerFullName  String
@@ -237,6 +264,7 @@ model Order {
   @@index([customerId])
   @@index([status])
   @@index([paymentStatus])
+  @@index([postbridgeSync])
 }
 
 // One row per checkpoint the order has actually reached. Order.status is the

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { ALL_ORDER_STATUSES, isRedundantChange } from "@/lib/order-status";
 import { codPaymentChange } from "@/lib/cod";
+import { cancelAtPostbridgeAfterResponse } from "@/lib/postbridge-orders";
 
 // Access is enforced by proxy.ts, which guards /api/admin/:path* — same as the
 // other admin routes. The session is re-read here only to attribute the change
@@ -68,6 +69,10 @@ export async function PATCH(
       },
     }),
   ]);
+
+  // A cancelled order must not be collected by India Post. If PostBridge already
+  // booked it, this is refused and the order page tells the admin to cancel it there.
+  if (status === "CANCELLED") cancelAtPostbridgeAfterResponse(id);
 
   return NextResponse.json({ ok: true, status });
 }

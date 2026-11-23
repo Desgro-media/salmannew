@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/order-status";
+import type { ShipmentView } from "@/lib/shipment";
 import { OrderTimeline, type TimelineEvent } from "./OrderTimeline";
+import { ShipmentTracking } from "./ShipmentTracking";
 
 interface TrackedOrder {
   orderNumber: string;
@@ -16,6 +18,8 @@ interface TrackedOrder {
   customerState: string;
   items: { id: string; name: string; sizeLabel: string; quantity: number }[];
   statusEvents: { status: OrderStatus; note: string | null; createdAt: string }[];
+  /** Set once the parcel has been booked with India Post. */
+  shipment: ShipmentView | null;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", {
@@ -207,6 +211,8 @@ export function TrackOrderForm({
               <p className="mt-3 text-sm">
                 {dateFormatter.format(new Date(order.estimatedDelivery))}
               </p>
+
+              {order.shipment && <ShipmentTracking shipment={order.shipment} className="mt-8" />}
             </div>
           </div>
         </div>

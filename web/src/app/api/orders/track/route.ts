@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { PLACED_ORDER_FILTER } from "@/lib/payments";
+import { loadShipment } from "@/lib/postbridge-orders";
 import { CUSTOMER_SESSION_COOKIE_NAME, verifyCustomerSessionToken } from "@/lib/customer-auth";
 
 // Lookup is open to guests, because checkout does not require an account — a
@@ -89,6 +90,10 @@ export async function POST(request: Request) {
         orderBy: { createdAt: "asc" },
         select: { status: true, note: true, createdAt: true },
       },
+      // Only to work out the shipment below; stripped before anything is sent.
+      postbridgeSync: true,
+      trackingNumber: true,
+      trackingUrl: true,
     },
   });
 
@@ -101,5 +106,15 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ order });
+  // The customer gets the tracking number, its link and the scans — never how
+  // the order stands inside PostBridge, which is the shop's business.
+  const { postbridgeSync, trackingNumber, trackingUrl, ...visible } = order;
+  const shipment = await loadShipment({
+    orderNumber: visible.orderNumber,
+    postbridgeSync,
+    trackingNumber,
+    trackingUrl,
+  });
+
+  return NextResponse.json({ order: { ...visible, shipment } });
 }

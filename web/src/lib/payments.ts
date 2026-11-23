@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@/lib/order-status";
 import { notifyOwnerOfNewOrder, type NewOrderSummary } from "@/lib/notify-owner";
+import { sendToPostbridgeAfterResponse } from "@/lib/postbridge-orders";
 
 /**
  * What counts as a real order: one the customer has actually committed to,
@@ -99,7 +100,13 @@ export async function markOrderPaid(input: {
 
   if (!result) return null;
 
-  if (result.justPaid) notifyOwnerAfterResponse(result.order);
+  if (result.justPaid) {
+    notifyOwnerAfterResponse(result.order);
+    // The same once-per-order moment is the one to hand the parcel to PostBridge:
+    // `justPaid` is true for exactly one of the browser and the webhook, so the
+    // order is sent once, and a repeat would be a no-op at PostBridge anyway.
+    sendToPostbridgeAfterResponse(result.order.id);
+  }
 
   return { orderNumber: result.order.orderNumber, estimatedDelivery: result.order.estimatedDelivery };
 }
