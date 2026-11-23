@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
@@ -40,6 +40,54 @@ function suggestSku(slug: string, volumeMl: string, unit: SizeUnit = "ml"): stri
   // ml keeps the original SP-IMP-030 shape so existing codes don't change; any
   // other unit gets its own suffix so it can't collide with a same-numbered ml size.
   return `SP-${prefix}-${vol}${unit === "ml" ? "" : unit.toUpperCase()}`;
+}
+
+/**
+ * Whether a code is one this form suggested itself, as opposed to one the admin
+ * typed. Only those follow the name and size around, and only those may be swapped
+ * for a free code without asking. A suggestion that turned out to be taken becomes
+ * `-2`, `-3`… (see lib/product-codes.ts), and still counts as ours.
+ */
+function isAutoSku(sku: string, slug: string, volumeMl: string, unit: SizeUnit): boolean {
+  const base = suggestSku(slug, volumeMl, unit);
+  if (sku === "" || sku === base) return true;
+  return sku.startsWith(`${base}-`) && /^\d+$/.test(sku.slice(base.length + 1));
+}
+
+/**
+ * The suggested code is built from the product's web address, so when that changes
+ * the codes of sizes that haven't been saved yet change with it — otherwise a size
+ * filled in before the name keeps "SP-PRD-…" and the next product's collides with it.
+ * Saved sizes keep theirs: by then the code is on orders and in other systems.
+ */
+function followSlug(sizes: SizeForm[], oldSlug: string, newSlug: string, isSet: boolean): SizeForm[] {
+  if (isSet || oldSlug === newSlug) return sizes;
+  return sizes.map((s) =>
+    !s.id && s.sku !== "" && isAutoSku(s.sku, oldSlug, s.volumeMl, s.unit)
+      ? { ...s, sku: suggestSku(newSlug, s.volumeMl, s.unit) }
+      : s,
+  );
+}
+
+/** One row of the server's answer to "which of these codes can't be used?" */
+interface SkuConflict {
+  index: number;
+  sku: string;
+  kind: "taken" | "repeated";
+  heldBy: string;
+  suggestion: string;
+  message: string;
+}
+
+interface SkuIssue {
+  message: string;
+  suggestion: string;
+}
+
+function pickedNote(c: SkuConflict): string {
+  return c.kind === "repeated"
+    ? `${c.sku} was already on another size here, so ${c.suggestion} was picked instead.`
+    : `${c.sku} is already used by ${c.heldBy}, so ${c.suggestion} was picked instead.`;
 }
 
 function discountSummary(price: string, compareAtPrice: string): string | null {
@@ -360,6 +408,13 @@ export function ProductForm({
   const [uploading, setUploading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Codes that can't be used, keyed by the code as typed (lower-cased). By text
+  // rather than by row, so it stays right as sizes are added, removed or reordered,
+  // and it clears itself the moment the admin edits the code.
+  const [skuIssues, setSkuIssues] = useState<Record<string, SkuIssue>>({});
+  // "… so SP-IMP-050-2 was picked instead", shown under a code the form swapped itself.
+  const [skuNotes, setSkuNotes] = useState<Record<string, string>>({});
+
   // Nothing is flagged until the first Save attempt. After that the marks are
   // recomputed on every keystroke, so a field drops its red as soon as it's
   // filled — the admin can watch the list shrink to nothing.
@@ -404,12 +459,21 @@ export function ProductForm({
     setValues((v) => {
       const slugWasAuto = v.slug === "" || v.slug === slugify(v.name);
       const fullNameWasAuto = v.fullName === "" || v.fullName === `me. ${v.name}`;
+      const slug = slugWasAuto ? slugify(name) : v.slug;
       return {
         ...v,
         name,
-        slug: slugWasAuto ? slugify(name) : v.slug,
+        slug,
         fullName: fullNameWasAuto ? (name ? `me. ${name}` : "") : v.fullName,
+        sizes: followSlug(v.sizes, v.slug, slug, v.isSet),
       };
+    });
+  }
+
+  function handleSlugChange(input: string) {
+    setValues((v) => {
+      const slug = slugify(input);
+      return { ...v, slug, sizes: followSlug(v.sizes, v.slug, slug, v.isSet) };
     });
   }
 
@@ -417,7 +481,7 @@ export function ProductForm({
   // either re-suggests it — unless the admin has typed their own code.
   function handleVolumeChange(index: number, volumeMl: string) {
     const size = values.sizes[index];
-    const skuWasAuto = size.sku === "" || size.sku === suggestSku(values.slug, size.volumeMl, size.unit);
+    const skuWasAuto = isAutoSku(size.sku, values.slug, size.volumeMl, size.unit);
     updateSize(index, {
       volumeMl,
       ...(skuWasAuto ? { sku: suggestSku(values.slug, volumeMl, size.unit) } : {}),
@@ -426,12 +490,80 @@ export function ProductForm({
 
   function handleUnitChange(index: number, unit: SizeUnit) {
     const size = values.sizes[index];
-    const skuWasAuto = size.sku === "" || size.sku === suggestSku(values.slug, size.volumeMl, size.unit);
+    const skuWasAuto = isAutoSku(size.sku, values.slug, size.volumeMl, size.unit);
     updateSize(index, {
       unit,
       ...(skuWasAuto ? { sku: suggestSku(values.slug, size.volumeMl, unit) } : {}),
     });
   }
+
+  // What the server found out about the codes. A code this form suggested itself is
+  // swapped for a free one on the spot (with a note saying so); a code the admin typed
+  // is never changed behind their back — it is marked, and the free one is offered.
+  const applyConflicts = useCallback((conflicts: SkuConflict[], auto: boolean[]) => {
+    const swaps = new Map<number, SkuConflict>();
+    const issues: Record<string, SkuIssue> = {};
+    for (const c of conflicts) {
+      if (auto[c.index]) swaps.set(c.index, c);
+      else issues[c.sku.toLowerCase()] = { message: c.message, suggestion: c.suggestion };
+    }
+    setSkuIssues(issues);
+    if (swaps.size === 0) return;
+
+    setValues((v) => ({
+      ...v,
+      sizes: v.sizes.map((s, i) => {
+        const c = swaps.get(i);
+        const typed = s.sku.trim();
+        return c && (typed === "" || typed === c.sku) ? { ...s, sku: c.suggestion } : s;
+      }),
+    }));
+    setSkuNotes((n) => ({
+      ...n,
+      ...Object.fromEntries([...swaps.values()].map((c) => [c.suggestion.toLowerCase(), pickedNote(c)])),
+    }));
+  }, []);
+
+  // A moment after the admin stops typing, ask whether the codes are free, so a taken
+  // one is sorted out before Save rather than failing it. The codes are folded into one
+  // string so this runs when a code changes, not on every keystroke elsewhere in the
+  // form. A suggestion for a size with no number yet ("…-000") isn't a real code.
+  const codeKey = JSON.stringify(
+    values.sizes.map((s) => {
+      const auto = !s.id && isAutoSku(s.sku, values.slug, s.volumeMl, s.unit);
+      const placeholder = auto && !values.isSet && !s.volumeMl.trim();
+      return [s.id ?? null, placeholder ? "" : s.sku.trim(), auto];
+    }),
+  );
+
+  useEffect(() => {
+    const rows = JSON.parse(codeKey) as [string | null, string, boolean][];
+    if (rows.every(([, sku]) => sku === "")) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/admin/product-codes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: rows.map(([sizeId, sku]) => ({ sku, sizeId: sizeId ?? undefined })),
+          }),
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const { conflicts } = (await res.json()) as { conflicts: SkuConflict[] };
+        if (!controller.signal.aborted) applyConflicts(conflicts, rows.map(([, , auto]) => auto));
+      } catch {
+        // Advisory only: saving checks again, and says so plainly.
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [codeKey, applyConflicts]);
 
   // Scroll to the first red field and put the cursor in it, so the admin doesn't
   // have to hunt through a long form. Runs a frame later, once the red marks
@@ -532,6 +664,9 @@ export function ProductForm({
       })),
     };
 
+    // Which codes the form suggested itself, as opposed to ones the admin typed.
+    const auto = values.sizes.map((s) => !s.id && isAutoSku(s.sku, values.slug, s.volumeMl, s.unit));
+
     setSubmitting(true);
     try {
       const res = await fetch(
@@ -544,7 +679,21 @@ export function ProductForm({
       );
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(typeof body?.error === "string" ? body.error : "Could not save product.");
+        const conflicts: SkuConflict[] | null = Array.isArray(body?.skuConflicts) ? body.skuConflicts : null;
+
+        if (conflicts) {
+          // Someone took a code after the live check, or it was never checked.
+          applyConflicts(conflicts, auto);
+          const needsAttention = conflicts.some((c) => !auto[c.index]);
+          setError(
+            needsAttention
+              ? body.error
+              : "A product code was already taken, so we switched to a free one. Check the new code in the Product code (SKU) box, then press Save again.",
+          );
+          if (needsAttention) focusFirstInvalid();
+        } else {
+          setError(typeof body?.error === "string" ? body.error : "Could not save product.");
+        }
         setSubmitting(false);
         return;
       }
@@ -709,7 +858,7 @@ export function ProductForm({
                     <Input
                       aria-invalid={bad("slug")}
                       value={values.slug}
-                      onChange={(e) => update("slug", slugify(e.target.value))}
+                      onChange={(e) => handleSlugChange(e.target.value)}
                       placeholder="imperial"
                     />
                   </Field>
@@ -897,6 +1046,8 @@ export function ProductForm({
             <div className="space-y-5">
               {values.sizes.map((size, i) => {
                 const summary = size.onSale ? discountSummary(size.price, size.compareAtPrice) : null;
+                const skuKey = size.sku.trim().toLowerCase();
+                const skuIssue = skuIssues[skuKey];
                 return (
                   <div key={i} className="border border-line">
                     <div className="flex items-center justify-between border-b border-line bg-paper-2 px-4 py-2">
@@ -1033,12 +1184,27 @@ export function ProductForm({
                       </div>
 
                       <div className="mt-4 border-t border-line pt-4">
-                        <Field label="Product code (SKU)">
-                          <Input value={size.sku} onChange={(e) => updateSize(i, { sku: e.target.value })} />
+                        <Field label="Product code (SKU)" error={skuIssue?.message}>
+                          <Input
+                            aria-invalid={skuIssue ? true : undefined}
+                            value={size.sku}
+                            onChange={(e) => updateSize(i, { sku: e.target.value })}
+                          />
                         </Field>
-                        <p className="mt-1.5 text-xs text-ink-soft">
-                          We fill this in automatically — only change it if you already use your own codes.
-                        </p>
+                        {skuIssue ? (
+                          <button
+                            type="button"
+                            onClick={() => updateSize(i, { sku: skuIssue.suggestion })}
+                            className="mt-1.5 inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.06em] hover:text-gold-ink md:min-h-0"
+                          >
+                            Use {skuIssue.suggestion}
+                          </button>
+                        ) : (
+                          <p className="mt-1.5 text-xs text-ink-soft">
+                            {skuNotes[skuKey] ??
+                              "We fill this in automatically — only change it if you already use your own codes."}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
