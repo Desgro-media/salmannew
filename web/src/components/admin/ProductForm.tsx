@@ -6,7 +6,13 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Input";
 import { formatPrice } from "@/lib/format";
-import { PRODUCT_CATEGORIES, categoryLabel } from "@/lib/shop-filters";
+import {
+  BAKHOOR_CATEGORY,
+  PRODUCT_CATEGORIES,
+  categoryLabel,
+  productKind,
+  type ProductKind,
+} from "@/lib/shop-filters";
 import { parseSetItems } from "@/lib/set-items";
 
 const CATEGORIES = PRODUCT_CATEGORIES;
@@ -442,6 +448,20 @@ export function ProductForm({
     setValues((v) => ({ ...v, [key]: value }));
   }
 
+  // What is being added: a perfume, a gift set, or bakhoor. Bakhoor is stored as a
+  // category, so choosing it sets that; choosing anything else takes it back to an
+  // ordinary scent family (the form's default), rather than leaving a gift set or
+  // a perfume carrying a "Bakhoor" category nobody can see or change.
+  const kind = productKind({ category: values.category, isSet: values.isSet });
+
+  function chooseKind(next: ProductKind) {
+    setValues((v) => ({
+      ...v,
+      isSet: next === "set",
+      category: next === "bakhoor" ? BAKHOOR_CATEGORY : v.category === BAKHOOR_CATEGORY ? "Fresh" : v.category,
+    }));
+  }
+
   function updateSize(index: number, patch: Partial<SizeForm>) {
     setValues((v) => ({
       ...v,
@@ -733,29 +753,36 @@ export function ProductForm({
           >
             <div>
               <span className="text-xs font-medium text-ink-soft">What are you adding?</span>
-              <div className="mt-1.5 grid grid-cols-2 border border-line text-xs font-semibold uppercase tracking-[0.08em]">
+              <div className="mt-1.5 grid grid-cols-3 border border-line text-xs font-semibold uppercase tracking-[0.08em]">
                 {(
                   [
-                    [false, "Single perfume"],
-                    [true, "Gift set"],
+                    ["perfume", "Single perfume"],
+                    ["set", "Gift set"],
+                    ["bakhoor", "Bakhoor"],
                   ] as const
-                ).map(([isSet, label]) => (
+                ).map(([value, label]) => (
                   <button
-                    key={label}
+                    key={value}
                     type="button"
-                    aria-pressed={values.isSet === isSet}
-                    onClick={() => update("isSet", isSet)}
-                    className={`min-h-11 px-3 transition-colors ${
-                      values.isSet === isSet ? "bg-ink text-paper" : "hover:bg-paper-2"
+                    aria-pressed={kind === value}
+                    onClick={() => chooseKind(value)}
+                    className={`min-h-11 px-2 transition-colors sm:px-3 ${
+                      kind === value ? "bg-ink text-paper" : "hover:bg-paper-2"
                     }`}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              {values.isSet && (
+              {kind === "set" && (
                 <p className="mt-2 text-xs text-ink-soft">
                   Several items sold together at one price. You&apos;ll list what&apos;s inside the box under Story.
+                </p>
+              )}
+              {kind === "bakhoor" && (
+                <p className="mt-2 text-xs text-ink-soft">
+                  Bakhoor and other incense. It shows under the Bakhoor tab in the shop. It is sold by weight, so
+                  pick gm, kg or tola next to each size.
                 </p>
               )}
             </div>
@@ -779,8 +806,9 @@ export function ProductForm({
                 />
               </Field>
               {/* A set has no single scent family or concentration; the
-                  storefront labels it "Gift Set" wherever these would show. */}
-              {!values.isSet && (
+                  storefront labels it "Gift Set" wherever these would show.
+                  Bakhoor has neither either, and is chosen above rather than here. */}
+              {kind === "perfume" && (
               <>
               <Field label="Category">
                 <select
@@ -789,7 +817,7 @@ export function ProductForm({
                   onChange={(e) => update("category", e.target.value as ProductFormValues["category"])}
                   className="mt-1.5 min-h-11 w-full border border-line bg-transparent px-3.5 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm"
                 >
-                  {CATEGORIES.map((c) => (
+                  {CATEGORIES.filter((c) => c !== BAKHOOR_CATEGORY).map((c) => (
                     <option key={c} value={c}>
                       {categoryLabel(c)}
                     </option>

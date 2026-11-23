@@ -5,6 +5,9 @@
 //
 // "Privé" is the second line rather than a scent family, which is why it leads
 // the list instead of sitting inside the Oriental/Floral/Fresh/Woody/Musk group.
+// "Bakhoor" is not a scent family either but a different kind of product, so it
+// closes the list; the admin form chooses it through its "What are you adding?"
+// control and leaves it out of the scent-family dropdown (see productKind below).
 export const PRODUCT_CATEGORIES = [
   "Prive",
   "Oriental",
@@ -12,9 +15,12 @@ export const PRODUCT_CATEGORIES = [
   "Fresh",
   "Woody",
   "Musk",
+  "Bakhoor",
 ] as const;
 
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+
+export const BAKHOOR_CATEGORY = "Bakhoor" as const satisfies ProductCategory;
 
 // Stored unaccented because these are also Prisma enum members, whose names
 // have to be plain identifiers — and it keeps ?filter=Prive out of percent
@@ -28,41 +34,72 @@ export function categoryLabel(category: string): string {
   return CATEGORY_LABELS[category as ProductCategory] ?? category;
 }
 
-// The shop's chips are the two lines plus everything — deliberately not one
-// chip per category. A scent family is how a bottle is tagged; `me.` and Privé
-// are what a visitor is actually choosing between, and nine chips scrolling off
-// the edge hid that. The families stay in PRODUCT_CATEGORIES, where the admin
-// form and the badge on a product card still use them.
-export const SHOP_FILTERS = ["All", "Me", "Prive", "Sets"] as const;
+// What kind of thing a product is. A gift set is a flag of its own (it mixes
+// products, so no single category fits it); bakhoor is a category value; anything
+// else is a perfume, whatever scent family or line it sits in. One function, so
+// the shop's tabs, the order of the grid and the admin form cannot disagree.
+export type ProductKind = "set" | "perfume" | "bakhoor";
+
+export function productKind(product: { category: string; isSet?: boolean }): ProductKind {
+  if (product.isSet) return "set";
+  return product.category === BAKHOOR_CATEGORY ? "bakhoor" : "perfume";
+}
+
+// The shop's tabs are the kinds of thing it sells, in the order a visitor is most
+// likely to want them. They used to be the two perfume lines (me. and Privé); both
+// are perfumes and now share the Perfumes tab, and the line is still visible as the
+// badge on every card. The scent families stay in PRODUCT_CATEGORIES, where the
+// admin form and that badge use them.
+export const SHOP_FILTERS = ["All", "Sets", "Perfumes", "Bakhoor"] as const;
 
 export type ShopFilter = (typeof SHOP_FILTERS)[number];
 
 const FILTER_LABELS: Record<ShopFilter, string> = {
   All: "All",
-  Me: "me.",
-  Prive: "Privé",
   Sets: "Gift Sets",
+  Perfumes: "Perfumes",
+  Bakhoor: "Bakhoor",
 };
 
 export function shopFilterLabel(filter: ShopFilter): string {
   return FILTER_LABELS[filter];
 }
 
-// `me.` is defined as "not Privé" rather than as a stored flag of its own: the
-// two lines exhaust the catalogue, so a scent added under a new family lands in
-// `me.` without anyone having to remember to update this.
-//
-// A gift set belongs to neither line — it mixes them — so it only shows under
-// All and its own Gift Sets chip, whatever category happens to be stored on it.
+// ?filter= arrives from a URL anyone can edit or keep, so it is matched against
+// the known values rather than cast. The two values the old tabs used still
+// resolve — both lines are perfumes — so a saved link or a search result lands on
+// the Perfumes tab instead of quietly opening the unfiltered shop. A Map, not an
+// object: "constructor" and "__proto__" must not look like a match.
+const LEGACY_FILTERS = new Map<string, ShopFilter>([
+  ["Me", "Perfumes"],
+  ["Prive", "Perfumes"],
+]);
+
+export function parseShopFilter(value: string | undefined): ShopFilter | undefined {
+  if (value === undefined) return undefined;
+  return SHOP_FILTERS.find((f) => f === value) ?? LEGACY_FILTERS.get(value);
+}
+
+const FILTER_KIND: Record<Exclude<ShopFilter, "All">, ProductKind> = {
+  Sets: "set",
+  Perfumes: "perfume",
+  Bakhoor: "bakhoor",
+};
+
 export function matchesShopFilter(
   product: { category: string; isSet?: boolean },
   filter: ShopFilter,
 ): boolean {
-  if (filter === "All") return true;
-  if (filter === "Sets") return product.isSet === true;
-  if (product.isSet) return false;
-  if (filter === "Prive") return product.category === "Prive";
-  return product.category !== "Prive";
+  return filter === "All" || productKind(product) === FILTER_KIND[filter];
+}
+
+// The order the kinds appear in under All: gift sets, then perfumes, then bakhoor.
+// Used to group the grid; within a kind the catalogue's own order (newest first)
+// is left exactly as it was.
+const KIND_ORDER: Record<ProductKind, number> = { set: 0, perfume: 1, bakhoor: 2 };
+
+export function shopGroupRank(product: { category: string; isSet?: boolean }): number {
+  return KIND_ORDER[productKind(product)];
 }
 
 /** The label a product's category shows as on cards and its page. */

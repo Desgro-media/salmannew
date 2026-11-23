@@ -22,6 +22,11 @@ enum Category {
   Floral
   Woody
   Musk
+  // Not a scent family: bakhoor (incense) is a different kind of product, shown
+  // under its own tab in the shop. It lives in this column, as Prive does, so a
+  // product has exactly one "what is it" value. The admin form picks it through
+  // its "What are you adding?" control rather than the scent-family dropdown.
+  Bakhoor
 }
 
 // Storefront values the shop owner changes without a deploy. One row, always
