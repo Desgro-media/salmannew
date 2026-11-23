@@ -10,6 +10,10 @@ export const productSizeInputSchema = z
     sku: z.string().trim().min(1),
     price: z.number().int().nonnegative(),
     compareAtPrice: z.number().int().nonnegative().optional(),
+    // Grams of the sealed box on a scale. Optional, and null clears a weight that
+    // was entered; a size with none falls back to the owner's safety-net weight (or
+    // none). Capped so a stray extra digit cannot declare a 22 kg parcel.
+    weightGrams: z.number().int().positive().max(20_000).nullable().optional(),
     image: z.string().trim().min(1),
     thumb: z.string().trim().min(1),
   })

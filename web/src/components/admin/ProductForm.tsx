@@ -170,6 +170,8 @@ interface SizeForm {
   price: string;
   onSale: boolean;
   compareAtPrice: string;
+  /** grams of the sealed box on a scale; "" = not weighed yet */
+  weightGrams: string;
   image: string;
 }
 
@@ -218,6 +220,7 @@ const emptySize: SizeForm = {
   price: "",
   onSale: false,
   compareAtPrice: "",
+  weightGrams: "",
   image: "",
 };
 
@@ -270,6 +273,7 @@ export interface ProductFormInitial {
     sku: string;
     price: number;
     compareAtPrice: number | null;
+    weightGrams?: number | null;
     image: string;
     thumb: string;
   }[];
@@ -313,6 +317,7 @@ function fromInitial(initial: ProductFormInitial): ProductFormValues {
       price: String(s.price),
       onSale: s.compareAtPrice != null,
       compareAtPrice: s.compareAtPrice != null ? String(s.compareAtPrice) : "",
+      weightGrams: s.weightGrams != null ? String(s.weightGrams) : "",
       image: s.image,
     })),
   };
@@ -379,6 +384,13 @@ function validate(values: ProductFormValues): FormErrors {
 
     if (size.onSale && !discountSummary(size.price, size.compareAtPrice)) {
       e[`size.${i}.compareAt`] = size.compareAtPrice.trim() ? "Must be higher than the price" : required;
+    }
+
+    // Optional, but a typo should not become a declared parcel weight: whole grams,
+    // and nothing past what the server accepts.
+    const weight = size.weightGrams.trim();
+    if (weight && !(Number.isInteger(Number(weight)) && Number(weight) > 0 && Number(weight) <= 20000)) {
+      e[`size.${i}.weight`] = "Whole grams, up to 20000";
     }
 
     // The server refuses a size with no photo, so it's as required as the rest.
@@ -659,6 +671,8 @@ export function ProductForm({
         sku: s.sku || (values.isSet ? suggestSku(values.slug, `SET${i + 1}`) : suggestSku(values.slug, s.volumeMl, s.unit)),
         price: Math.round(Number(s.price)),
         compareAtPrice: s.onSale && s.compareAtPrice ? Math.round(Number(s.compareAtPrice)) : undefined,
+        // null (not undefined) when blank, so clearing the box clears the saved weight.
+        weightGrams: s.weightGrams.trim() ? Math.round(Number(s.weightGrams)) : null,
         image: s.image,
         thumb: s.image,
       })),
@@ -1183,28 +1197,52 @@ export function ProductForm({
                         </div>
                       </div>
 
-                      <div className="mt-4 border-t border-line pt-4">
-                        <Field label="Product code (SKU)" error={skuIssue?.message}>
-                          <Input
-                            aria-invalid={skuIssue ? true : undefined}
-                            value={size.sku}
-                            onChange={(e) => updateSize(i, { sku: e.target.value })}
-                          />
-                        </Field>
-                        {skuIssue ? (
-                          <button
-                            type="button"
-                            onClick={() => updateSize(i, { sku: skuIssue.suggestion })}
-                            className="mt-1.5 inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.06em] hover:text-gold-ink md:min-h-0"
+                      <div className="mt-4 grid grid-cols-1 gap-4 border-t border-line pt-4 sm:grid-cols-2">
+                        <div>
+                          <Field label="Product code (SKU)" error={skuIssue?.message}>
+                            <Input
+                              aria-invalid={skuIssue ? true : undefined}
+                              value={size.sku}
+                              onChange={(e) => updateSize(i, { sku: e.target.value })}
+                            />
+                          </Field>
+                          {skuIssue ? (
+                            <button
+                              type="button"
+                              onClick={() => updateSize(i, { sku: skuIssue.suggestion })}
+                              className="mt-1.5 inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.06em] hover:text-gold-ink md:min-h-0"
+                            >
+                              Use {skuIssue.suggestion}
+                            </button>
+                          ) : (
+                            <p className="mt-1.5 text-xs text-ink-soft">
+                              {skuNotes[skuKey] ??
+                                "We fill this in automatically — only change it if you already use your own codes."}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Field
+                            label={values.isSet ? "Weight of the boxed set (grams)" : "Weight with box (grams)"}
+                            error={errors[`size.${i}.weight`]}
                           >
-                            Use {skuIssue.suggestion}
-                          </button>
-                        ) : (
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              step={1}
+                              placeholder="e.g. 225"
+                              aria-invalid={bad(`size.${i}.weight`)}
+                              value={size.weightGrams}
+                              onChange={(e) => updateSize(i, { weightGrams: e.target.value })}
+                            />
+                          </Field>
                           <p className="mt-1.5 text-xs text-ink-soft">
-                            {skuNotes[skuKey] ??
-                              "We fill this in automatically — only change it if you already use your own codes."}
+                            Put the sealed box on a scale. Optional — packing weight is added when it ships, and
+                            India Post bills by weight.
                           </p>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>

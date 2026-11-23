@@ -44,6 +44,10 @@ model StoreSettings {
   codEnabled            Boolean  @default(true)
   codFee                Int      @default(0)
   codMaxOrderValue      Int      @default(5000)
+  // What the shipping carton, wrapping and tape add to a parcel, in grams. Added
+  // once per order to the items' own weights when the weight is sent to PostBridge.
+  // Not used at checkout; it lives here so the owner can change it without a deploy.
+  packingGrams          Int      @default(50)
   updatedAt             DateTime @updatedAt
 }
 
@@ -135,6 +139,12 @@ model ProductSize {
   compareAtPrice Int?
   image          String
   thumb          String
+  // The sealed box on a scale, in grams: bottle, box and shrink-wrap, but not the
+  // shipping packaging (StoreSettings.packingGrams adds that once per order). India
+  // Post bills by weight slab, so the parcel weight sent to PostBridge is the sum
+  // of these times the quantities. Null = not weighed yet; the admin form leaves it
+  // optional so a product can be added before anyone has put it on the scale.
+  weightGrams    Int?
   // Retiring a size cannot mean deleting the row: OrderItem points here with
   // onDelete: Restrict, so any size that has ever been bought refuses to go,
   // and past orders should keep their link regardless. Archiving takes it off
@@ -241,6 +251,10 @@ model Order {
   postbridgeStatus   String?
   postbridgeError    String?
   postbridgeSyncedAt DateTime?
+  // The parcel weight declared to PostBridge, kept so an admin can see what was
+  // sent when a parcel is billed in an unexpected slab. Null when none was sent
+  // (PostBridge then falls back to its own catalogue weight).
+  postbridgeWeightGrams Int?
   // The India Post article number and its tracking page, once a shipment is
   // booked. The scan history is not stored: it keeps changing, so it is fetched
   // when it is shown.

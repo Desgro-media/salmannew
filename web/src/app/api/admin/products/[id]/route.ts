@@ -85,6 +85,8 @@ export async function PATCH(
             sku: size.sku,
             price: size.price,
             compareAtPrice: size.compareAtPrice,
+            // null clears an entered weight; undefined (an older form) leaves it be.
+            weightGrams: size.weightGrams,
             image: size.image,
             thumb: size.thumb,
           };

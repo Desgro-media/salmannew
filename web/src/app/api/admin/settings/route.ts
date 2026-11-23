@@ -17,6 +17,9 @@ const settingsSchema = z.object({
   codFee: z.number().int().min(0).max(10_000),
   // 0 means no cap.
   codMaxOrderValue: z.number().int().min(0).max(1_000_000),
+  // Grams the shipping packaging adds to a parcel. Capped: a stray extra digit
+  // here would be declared on every parcel and bill a heavier slab each time.
+  packingGrams: z.number().int().min(0).max(5000),
 });
 
 export async function PUT(request: Request) {
@@ -24,7 +27,7 @@ export async function PUT(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Enter a whole number of rupees in every amount field." },
+      { error: "Enter a whole number in every field (rupees for amounts, grams for the packing weight)." },
       { status: 400 },
     );
   }
@@ -49,5 +52,6 @@ export async function PUT(request: Request) {
     codEnabled: settings.codEnabled,
     codFee: settings.codFee,
     codMaxOrderValue: settings.codMaxOrderValue,
+    packingGrams: settings.packingGrams,
   });
 }

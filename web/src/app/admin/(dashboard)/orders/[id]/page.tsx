@@ -82,6 +82,7 @@ export default async function AdminOrderDetailPage({
           pbStatus={order.postbridgeStatus}
           error={order.postbridgeError}
           syncedLabel={order.postbridgeSyncedAt ? stampFormatter.format(order.postbridgeSyncedAt) : null}
+          weightGrams={order.postbridgeWeightGrams}
           shipment={shipment}
         />
       </div>

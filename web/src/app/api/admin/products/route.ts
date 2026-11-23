@@ -65,6 +65,7 @@ export async function POST(request: Request) {
             sku: size.sku,
             price: size.price,
             compareAtPrice: size.compareAtPrice,
+            weightGrams: size.weightGrams ?? null,
             image: size.image,
             thumb: size.thumb,
           })),

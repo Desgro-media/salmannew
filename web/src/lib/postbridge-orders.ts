@@ -11,6 +11,8 @@ import {
   type TrackingInfo,
 } from "@/lib/postbridge";
 import { formatScanTime, type ShipmentView } from "@/lib/shipment";
+import { parcelWeight, type ParcelWeight } from "@/lib/parcel-weight";
+import { getStoreSettings } from "@/lib/store-settings";
 
 // What to send PostBridge for one of our orders, and what to do with each answer.
 //
@@ -56,17 +58,42 @@ function cleanPhone(raw: string): string {
   return digits;
 }
 
-export function buildPostbridgeOrder(order: Order & { items: OrderItem[] }): PostbridgeOrderInput {
+/**
+ * A fixed weight to use for an order containing a product nobody has weighed yet,
+ * if the owner configured one. Only ever a safety net: a weight worked out from
+ * the items always wins, because one number cannot suit both a single small
+ * bottle and a box of several.
+ */
+function fallbackWeightGrams(): number | null {
+  const grams = Math.round(Number(process.env.POSTBRIDGE_DEFAULT_WEIGHT_GRAMS));
+  return Number.isFinite(grams) && grams > 0 ? grams : null;
+}
+
+/** An order with each line's size weight loaded, which is all the weighing needs. */
+type WeighableOrder = { items: { quantity: number; size: { weightGrams: number | null } }[] };
+
+/**
+ * What this order's parcel weighs: the weight entered for each size times how many
+ * were bought, plus the packing allowance from Settings. See lib/parcel-weight.ts.
+ */
+export async function weighOrder(order: WeighableOrder): Promise<ParcelWeight | null> {
+  const { packingGrams } = await getStoreSettings();
+  return parcelWeight(
+    order.items.map((item) => ({ quantity: item.quantity, weightGrams: item.size.weightGrams })),
+    packingGrams,
+    fallbackWeightGrams(),
+  );
+}
+
+export function buildPostbridgeOrder(
+  order: Order & { items: OrderItem[] },
+  weightGrams: number | null,
+): PostbridgeOrderInput {
   const phone = cleanPhone(order.customerPhone);
   // PostBridge has no field for our cash-on-delivery fee, and what the courier
   // collects is amount + deliveryCharge. Folding the fee into the delivery
   // charge makes that sum equal what the customer was actually asked to pay.
   const deliveryCharge = order.shipping + order.codFee;
-
-  // Optional. When PostBridge's own catalogue has no weight for a product, a
-  // fixed one can be sent here instead; it overrides the catalogue's.
-  const grams = Math.round(Number(process.env.POSTBRIDGE_DEFAULT_WEIGHT_GRAMS));
-  const weight = Number.isFinite(grams) && grams > 0 ? { shipment: { weightGrams: grams } } : {};
 
   return {
     // Our order number is the id: PostBridge treats a repeat of it as the same
@@ -95,7 +122,9 @@ export function buildPostbridgeOrder(order: Order & { items: OrderItem[] }): Pos
     amount: order.subtotal,
     deliveryCharge,
     totalOrderValue: order.total,
-    ...weight,
+    // When left out, PostBridge uses the weights in its own catalogue — which is
+    // why an order with nothing trustworthy to declare sends none at all.
+    ...(weightGrams ? { shipment: { weightGrams } } : {}),
   };
 }
 
@@ -114,7 +143,10 @@ const notEnabled = () => fail(409, "Shipping with PostBridge is not switched on.
 /** Hands the order to PostBridge. Safe to repeat: PostBridge returns the order it already has. */
 export async function sendToPostbridge(orderId: string): Promise<ActionResult> {
   if (!isPostbridgeEnabled()) return notEnabled();
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: { include: { size: { select: { weightGrams: true } } } } },
+  });
   if (!order) return fail(404, "Order not found.");
   // Already there. Sending again would at best be a no-op, and a *failed* retry
   // must never flip an order PostBridge does hold to "failed".
@@ -122,7 +154,8 @@ export async function sendToPostbridge(orderId: string): Promise<ActionResult> {
   if (!isShippable(order)) return fail(409, "This order is unpaid or cancelled, so there is nothing to ship.");
 
   try {
-    const reply = await postbridge.createOrder(buildPostbridgeOrder(order));
+    const weight = await weighOrder(order);
+    const reply = await postbridge.createOrder(buildPostbridgeOrder(order, weight?.grams ?? null));
     let state = readOrderReply(reply);
 
     // An account set to book on arrival answers already booked: pick up the article.
@@ -140,6 +173,8 @@ export async function sendToPostbridge(orderId: string): Promise<ActionResult> {
         postbridgeError: null,
         postbridgeSyncedAt: new Date(),
         postbridgeStatus: state.status ?? "Sent",
+        // Remembered so an admin can see what was declared if a parcel is ever billed oddly.
+        postbridgeWeightGrams: weight?.grams ?? null,
         ...(state.trackingNumber ? { trackingNumber: state.trackingNumber, trackingUrl: state.trackingUrl ?? null } : {}),
       },
     });

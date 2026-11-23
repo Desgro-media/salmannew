@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/db";
 import { products } from "./seed-data";
+import { SIZE_WEIGHTS_GRAMS } from "./size-weights";
 
 async function seedSuperadmin() {
   const email = process.env.SEED_SUPERADMIN_EMAIL;
@@ -75,6 +76,7 @@ async function seedProducts() {
           compareAtPrice: size.compareAtPrice,
           image: size.image,
           thumb: size.thumb,
+          weightGrams: SIZE_WEIGHTS_GRAMS[size.sku],
         },
         create: {
           id: size.id,
@@ -82,6 +84,7 @@ async function seedProducts() {
           label: size.label,
           volumeMl: size.volumeMl,
           sku: size.sku,
+          weightGrams: SIZE_WEIGHTS_GRAMS[size.sku],
           price: size.price,
           compareAtPrice: size.compareAtPrice,
           image: size.image,

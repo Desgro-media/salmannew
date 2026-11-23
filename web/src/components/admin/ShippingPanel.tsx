@@ -33,6 +33,7 @@ export function ShippingPanel({
   pbStatus,
   error,
   syncedLabel,
+  weightGrams,
   shipment,
 }: {
   orderId: string;
@@ -46,6 +47,8 @@ export function ShippingPanel({
   error: string | null;
   /** When the order was last checked with PostBridge, already formatted. */
   syncedLabel: string | null;
+  /** The parcel weight declared to PostBridge, or null if none was sent. */
+  weightGrams: number | null;
   shipment: ShipmentView | null;
 }) {
   const router = useRouter();
@@ -117,6 +120,17 @@ export function ShippingPanel({
           <p className="mt-3 text-sm">
             PostBridge: <strong>{pbStatus ?? "Sent"}</strong>
             {syncedLabel && <span className="text-ink-soft"> · checked {syncedLabel}</span>}
+          </p>
+
+          {/* India Post bills by weight slab, so what was declared is worth seeing. */}
+          <p className="mt-1 text-sm text-ink-soft">
+            {weightGrams !== null ? (
+              <>
+                Parcel weight sent: <strong className="text-ink">{weightGrams} g</strong>
+              </>
+            ) : (
+              "No parcel weight was sent — PostBridge uses the weights in its own catalogue."
+            )}
           </p>
 
           {pending && (
