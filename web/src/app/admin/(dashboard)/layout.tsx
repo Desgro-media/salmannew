@@ -5,6 +5,7 @@ const NAV_LINKS = [
   { href: "/admin", label: "Products" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/products/new", label: "New Product" },
+  { href: "/admin/product-codes", label: "Product Codes" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/delivery-boys", label: "Delivery Boys" },
   { href: "/admin/settings", label: "Settings" },
