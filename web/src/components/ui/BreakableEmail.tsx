@@ -3,7 +3,7 @@
  *
  * An address is a single unbreakable word, so one that is wider than its column
  * runs on into whatever sits beside it. Offering a break point lets a long one
- * fold tidily — "salmanperfume.com" over "@gmail.com" — and only when it has to.
+ * fold tidily — "salmanperfumery.com" over "@gmail.com" — and only when it has to.
  * <wbr> adds no character, so selecting or copying the address still gives the
  * plain address.
  */
