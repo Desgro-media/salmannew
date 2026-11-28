@@ -24,6 +24,12 @@ export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
   freeShippingThreshold: 2999,
 };
 
+/**
+ * How far ahead of the order date a new order's estimated delivery is set. The
+ * shipping policy quotes the same figure.
+ */
+export const ESTIMATED_DELIVERY_DAYS = 5;
+
 export function calculateShipping(
   subtotal: number,
   settings: ShippingSettings,

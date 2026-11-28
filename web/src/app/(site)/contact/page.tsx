@@ -4,6 +4,8 @@ import { ButtonLink } from "@/components/ui/Button";
 import { BreakableEmail } from "@/components/ui/BreakableEmail";
 import {
   CONTACT_EMAIL,
+  CONTACT_PHONE,
+  CONTACT_PHONE_HREF,
   LOCATION_NAME,
   LOCATION_ADDRESS,
   LOCATION_MAPS_DIRECTIONS_URL,
@@ -23,8 +25,8 @@ const CHANNELS = [
   },
   {
     label: "Phone",
-    value: "+91 94473 67777",
-    href: "tel:+919447367777",
+    value: CONTACT_PHONE,
+    href: CONTACT_PHONE_HREF,
   },
   {
     label: "Instagram",

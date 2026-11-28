@@ -409,6 +409,16 @@ A second way to pay, chosen at checkout. Online orders are real once Razorpay co
 - **Settling the cash.** `codPaymentChange()` runs inside both status routes (`/api/admin/orders/[id]` and `/api/delivery/orders/[id]`): moving a COD order to **DELIVERED** sets `PAID` + `paidAt`; moving it off DELIVERED sets it back to `COD_PENDING`. Online orders are never touched. The delivery order page shows a "Collect ₹X" banner while a COD order is unpaid.
 - **Not covered.** A COD order is not verified by anyone before it ships, so a fake one costs a parcel. The cap, the phone/pincode checks and the admin off switch are the only levers; there is no rate limit on `/api/orders`, no OTP, and no per-pincode serviceability list. A COD order cancelled after delivery is not refunded or reconciled by the app.
 
+### 9.10 Policy pages — `lib/policies/`, `/admin/policies`
+
+`/shipping-policy`, `/return-policy`, `/privacy-policy` and `/terms`, linked from the footer and the About page.
+
+- **Text.** The defaults are in `lib/policies/defaults.ts`. Saving on `/admin/policies/[slug]` (`PUT /api/admin/policies/[slug]`) writes a `Policy` row that replaces the default; "Restore Default Text" deletes the row. **Once a row exists, changing `defaults.ts` no longer changes that page.**
+- **Formatting** is the small set in `markup.ts` (headings, bullets, bold, links), rendered as React elements, never as HTML. Link addresses are allow-listed.
+- **Live figures.** `{{delivery_charges}}`, `{{cash_on_delivery}}`, `{{delivery_days}}` and the contact tags are filled at render time (`placeholders.ts`). An unknown tag is refused on save. Delivery days is `ESTIMATED_DELIVERY_DAYS` in `lib/shipping.ts`, which `/api/orders` also uses.
+- **Returns line.** `Policy.summary` (returns only) is what each product page shows under "Shipping & Returns".
+- **Keep in step with the code.** The privacy text describes what is collected and who receives it, including Meta (§9.8). The return window, cancellation window and refund times are promises in text only; nothing in the app enforces them.
+
 ---
 
 ## 10. Known gaps & stale docs

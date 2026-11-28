@@ -56,6 +56,19 @@ model StoreSettings {
   updatedAt             DateTime @updatedAt
 }
 
+// The text of the shop's policy pages (shipping, returns, privacy, terms) as the
+// admin last saved it. A page with no row shows the default in
+// lib/policies/defaults.ts, so a new database needs no seeding and restoring the
+// default is a delete. The set of pages is fixed in code; `slug` names one.
+model Policy {
+  slug      String   @id
+  body      String   @db.Text
+  // Only the returns policy has one: the line every product page shows under
+  // "Shipping & Returns", kept beside the full text so the two are edited together.
+  summary   String?
+  updatedAt DateTime @updatedAt
+}
+
 model Admin {
   id            String             @id @default(cuid())
   email         String             @unique

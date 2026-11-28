@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/products";
 import { ProductGallery } from "@/components/product/ProductGallery";
@@ -15,6 +16,8 @@ import { productKind, productTypeLabel } from "@/lib/shop-filters";
 import { SetContents } from "@/components/product/SetContents";
 import { formatPrice } from "@/lib/format";
 import { getStoreSettings } from "@/lib/store-settings";
+import { getPolicy } from "@/lib/policies/store";
+import { POLICY_PAGES } from "@/lib/policies/pages";
 
 // Products are admin-managed in the DB now, so params can't be enumerated
 // statically at build time. ISR keeps pages fast while picking up admin
@@ -45,6 +48,7 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const settings = await getStoreSettings();
+  const returnsPolicy = await getPolicy("returns");
 
   const related = await getRelatedProducts(product, 4);
 
@@ -123,7 +127,14 @@ export default async function ProductPage({
                 {settings.shippingFee === 0
                   ? "Shipping is free on every order."
                   : `Free shipping on orders over ${formatPrice(settings.freeShippingThreshold)}; ${formatPrice(settings.shippingFee)} below that.`}{" "}
-                Unopened bottles can be returned within 14 days of delivery.
+                {returnsPolicy.summary}
+                <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+                  {[POLICY_PAGES.shipping, POLICY_PAGES.returns].map((policy) => (
+                    <Link key={policy.slug} href={policy.path} className="font-semibold underline underline-offset-4">
+                      {policy.title}
+                    </Link>
+                  ))}
+                </span>
               </AccordionItem>
               {!isBakhoor && (
                 <AccordionItem title="How to Apply">
