@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/admin/product-codes", label: "Product Codes" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/delivery-boys", label: "Delivery Boys" },
+  { href: "/admin/policies", label: "Policies" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
@@ -47,11 +48,12 @@ export default function AdminDashboardLayout({
             <LogoutButton />
           </div>
 
-          <nav className="col-span-3 row-start-2 w-full md:row-start-auto md:w-auto md:flex-1">
+          <nav className="col-span-3 row-start-2 w-full md:row-start-auto md:w-auto md:min-w-0 md:flex-1">
             {/* Wraps rather than scrolls sideways: short links fit a couple of
                 rows, and every destination stays visible. A scroll strip would
-                clip the last one behind an edge nobody thinks to swipe. */}
-            <ul className="flex flex-wrap items-center gap-x-1 gap-y-0 md:flex-nowrap md:gap-6">
+                clip the last one behind an edge nobody thinks to swipe. The
+                links only share one row from xl, where all of them fit. */}
+            <ul className="flex flex-wrap items-center gap-x-1 gap-y-0 md:gap-x-6 md:gap-y-3 xl:flex-nowrap">
               {NAV_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link

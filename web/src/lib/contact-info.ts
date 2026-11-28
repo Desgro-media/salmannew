@@ -3,6 +3,8 @@
 // BREVO_SENDER_EMAIL and ORDER_NOTIFY_EMAIL settings in Vercel, and the sender must be one
 // Brevo has verified.
 export const CONTACT_EMAIL = "salmanperfumery.com@gmail.com";
+export const CONTACT_PHONE = "+91 94473 67777";
+export const CONTACT_PHONE_HREF = `tel:${CONTACT_PHONE.replace(/\s+/g, "")}`;
 
 export const LOCATION_NAME = "MARKAZ COMPLEX";
 export const LOCATION_ADDRESS =

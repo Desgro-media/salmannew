@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 import { getAllProducts } from "@/lib/products";
+import { POLICY_LIST } from "@/lib/policies/pages";
 
 export const metadata: Metadata = {
   title: "About — Salman Perfumes",
@@ -103,6 +105,31 @@ export default async function AboutPage() {
         <Reveal delay={0.2} className="mt-10 flex justify-center">
           <ButtonLink href="/shop">Shop the Collection</ButtonLink>
         </Reveal>
+      </section>
+
+      <section className="container-grid border-t border-line py-20 md:py-28">
+        <Reveal>
+          <p className="eyebrow text-ink-soft">Good to know</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">Our policies</h2>
+        </Reveal>
+        <ul className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {POLICY_LIST.map((policy, i) => (
+            <li key={policy.slug}>
+              <Reveal delay={(i % 4) * 0.08} className="h-full">
+                <Link
+                  href={policy.path}
+                  className="group flex h-full flex-col rounded-[20px] border border-line p-6 transition-colors hover:border-ink"
+                >
+                  <span className="text-lg font-semibold tracking-tight">{policy.title}</span>
+                  <span className="mt-2 text-sm leading-relaxed text-ink-soft">{policy.description}</span>
+                  <span className="mt-auto pt-5 text-xs font-semibold uppercase tracking-[0.14em] group-hover:text-gold-ink">
+                    Read <span aria-hidden>→</span>
+                  </span>
+                </Link>
+              </Reveal>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );

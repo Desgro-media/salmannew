@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { calculateShipping } from "@/lib/shipping";
+import { calculateShipping, ESTIMATED_DELIVERY_DAYS } from "@/lib/shipping";
 import { getStoreSettings } from "@/lib/store-settings";
 import { codAvailability } from "@/lib/cod";
 import { formatDeliveryDate, formatPrice } from "@/lib/format";
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   const shipping = calculateShipping(subtotal, settings);
 
   const orderNumber = `SP-${Date.now().toString(36).toUpperCase()}`;
-  const estimatedDeliveryDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+  const estimatedDeliveryDate = new Date(Date.now() + ESTIMATED_DELIVERY_DAYS * 24 * 60 * 60 * 1000);
 
   const orderLines = {
     create: items.map((item) => {

@@ -2,15 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/products";
 import { BreakableEmail } from "@/components/ui/BreakableEmail";
-import { CONTACT_EMAIL, LOCATION_MAPS_DIRECTIONS_URL } from "@/lib/contact-info";
+import { CONTACT_EMAIL, CONTACT_PHONE, LOCATION_MAPS_DIRECTIONS_URL } from "@/lib/contact-info";
+import { POLICY_LIST } from "@/lib/policies/pages";
 
 export async function Footer() {
   const products = await getAllProducts();
 
   return (
     <footer className="border-t border-line bg-ink text-paper">
-      <div className="container-grid grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-12 md:py-24">
-        <div className="col-span-2 md:col-span-4">
+      <div className="container-grid grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-4 md:py-24 lg:grid-cols-12">
+        <div className="col-span-2 md:col-span-4 lg:col-span-3">
           {/* The full lockup — flame over SALMAN PERFUMES — rather than the
               flame alone. Tall enough that the wordmark under the mark is
               actually readable; below about this height it degrades into a gold
@@ -30,7 +31,7 @@ export async function Footer() {
           </p>
         </div>
 
-        <div className="md:col-span-2 md:col-start-6">
+        <div className="lg:col-span-2 lg:col-start-4">
           <p className="eyebrow text-paper/65">Shop</p>
           <ul className="mt-5 space-y-3 text-sm">
             {products.slice(0, 5).map((p) => (
@@ -54,7 +55,7 @@ export async function Footer() {
           </ul>
         </div>
 
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <p className="eyebrow text-paper/65">Company</p>
           <ul className="mt-5 space-y-3 text-sm">
             <li>
@@ -68,6 +69,11 @@ export async function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/contact" className="text-paper/80 hover:text-gold transition-colors">
+                Contact
+              </Link>
+            </li>
+            <li>
               <Link href="/checkout" className="text-paper/80 hover:text-gold transition-colors">
                 Checkout
               </Link>
@@ -75,13 +81,26 @@ export async function Footer() {
           </ul>
         </div>
 
-        <div className="col-span-2 md:col-span-3">
+        <div className="lg:col-span-2">
+          <p className="eyebrow text-paper/65">Policies</p>
+          <ul className="mt-5 space-y-3 text-sm">
+            {POLICY_LIST.map((policy) => (
+              <li key={policy.slug}>
+                <Link href={policy.path} className="text-paper/80 hover:text-gold transition-colors">
+                  {policy.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="col-span-2 md:col-span-4 lg:col-span-3">
           <p className="eyebrow text-paper/65">Get in touch</p>
           <ul className="mt-5 space-y-3 text-sm text-paper/80">
             <li className="[overflow-wrap:anywhere]">
               <BreakableEmail value={CONTACT_EMAIL} />
             </li>
-            <li>+91 94473 67777</li>
+            <li>{CONTACT_PHONE}</li>
             <li>
               <a
                 href={LOCATION_MAPS_DIRECTIONS_URL}
